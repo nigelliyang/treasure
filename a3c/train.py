@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import gym
-
 import tensorflow as tf
 import threading
 import numpy as np

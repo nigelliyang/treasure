@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from network import LSTM_ACNetwork
 from config import *
-import gym
+from environment import *
+from futuresData import *
 
 import tensorflow as tf
 import numpy as np
@@ -16,28 +17,56 @@ class TrainingThread(object):
         self.thread_index = thread_index
         self.max_global_steps = max_global_steps
         self.local_network = LSTM_ACNetwork(args.action_size, self.thread_index)
-        self.local_network.prepare_loss(args.entropy_beta)
+        self.local_network.prepare_loss(args.entropy_beta, args.risk_beta)
 
         self.opt = optimizer
         local_gradients = self.opt.compute_gradients(self.local_network.total_loss, self.local_network.vars)
-        self.gradients = [(tf.clip_by_norm(local_gradients[i][0], args.grad_norm_clip), global_network.vars[i]) for i in range(len(local_gradients))]
+        self.gradients = local_gradients
+        # TODO: fix the clip by norm
+        # The clip by norm function has been turned off
+        # because this operator will cause nan output
+        # self.gradients = [(tf.clip_by_norm(local_gradients[i][0], args.grad_norm_clip), global_network.vars[i]) for i in range(len(local_gradients))]
         self.apply_gradients = self.opt.apply_gradients(self.gradients)
 
         self.sync = self.local_network.sync_from(global_network)
 
-        self.env = gym.make(args.game)
+        data = futuresData()
+        data.loadData_moreday0607()
+        self.env = futuresGame(data)
         self.terminal = True
-        self.episode_reward = 0
+        self.episode_reward = 1.0 # use multiplication model in futures game
+        self.init_allocation = np.zeros(args.action_size)
+        self.init_allocation[-1] = 1
+        self.allocation = self.init_allocation
 
         self.local_t = 0
 
-    def choose_action(self, pi_values):
-        return np.random.choice(range(len(pi_values)), p = pi_values)
+    def choose_action(self, gauss_mean, gauss_sigma):
+        '''
+        :param guass_mean:  array [] ndarray
+        :param guass_sigma: matrix like [[],[],[]] ndarray
+        :return: ndarray
+        '''
+        max_times = 1000
+        def check(values):
+            for a in values:
+                if abs(a) > 3:
+                    return False
+            return True
+
+        for i in range(max_times):
+            values = np.random.multivariate_normal(gauss_mean,gauss_sigma)
+            values = np.append(values, 1-np.sum(values))
+            if check(values):
+                return values
+        print('bad luck for choosing %d times not find a good assignment, so return the guass_mean' % max_times)
+        return np.append(gauss_mean + 1-np.sum(gauss_mean))
 
     def process(self, sess, global_t):
         previous_t = self.local_t
 
         states = []
+        allocations = []
         actions = []
         rewards = []
         values = []
@@ -47,63 +76,63 @@ class TrainingThread(object):
         if self.terminal:
             self.state = self.env.reset()
             self.local_network.reset_state_value()
+            self.allocation = self.init_allocation
 
         for i in range(args.local_t_max):
-            pi_, value_ = self.local_network.run_policy_and_value(sess, self.state)
-            action_index = self.choose_action(pi_)
-            action = args.action_map[action_index]
+            gauss_mean, value_ = self.local_network.run_policy_and_value(sess, self.state, self.allocation)
+            action = self.choose_action(gauss_mean, args.gauss_sigma)
 
             states.append(self.state)
-            actions.append(action_index)
+            allocations.append(self.allocation)
+            actions.append(action)
             values.append(value_)
 
-            self.state, reward, self.terminal_end, _ = self.env.step(action)
-            self.episode_reward += reward
-            rewards.append( np.clip(reward, -1, 1) )
+            # reward is the neat return rate of capital, like 0.03
+            self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
+            self.episode_reward *= (1.0+reward)
+            # print(self.episode_reward)
+            rewards.append(reward)
             self.local_t += 1
-
-            if self.terminal_end:
-                print("score={}".format(self.episode_reward))
-                self.episode_reward = 0
-                self.state = self.env.reset()
+            if self.terminal:
+                print("return rate = {}".format(self.episode_reward))
+                self.episode_reward = 1.0
                 break
 
-        if self.terminal_end:
-            R = 0.0
+        if self.terminal:
+            R = 1.0
         else:
-            R = self.local_network.run_value(sess, self.state)
+            R = self.local_network.run_value(sess, self.state, self.allocation)
 
-        actions.reverse()
-        states.reverse()
         rewards.reverse()
         values.reverse()
-
-        batch_si = []
-        batch_a = []
+        # compute and accmulate gradients
+        # FROM LATS TO FIRST
         batch_td = []
         batch_R = []
-
-        # compute and accmulate gradients
-        for(ai, ri, si, Vi) in zip(actions, rewards, states, values):
-            R = ri + args.gamma * R
+        for(ri, Vi) in zip(rewards, values):
+            # args.gamma is the discount
+            # the trade period is very short, the discount should be a really small value
+            R = (1+ri) * args.gamma * R
             td = R - Vi
-            a = np.zeros([args.action_size])
-            a[ai] = 1
-
-            batch_si.append(si)
-            batch_a.append(a)
             batch_td.append(td)
             batch_R.append(R)
 
-        batch_si.reverse()
-        batch_a.reverse()
         batch_td.reverse()
         batch_R.reverse()
+        batch_si = states
+        batch_allo = allocations
+        batch_a = actions
+        # reverse back the values
+        values.reverse()
+        batch_vi = values
+
         feed_dict = {
             self.local_network.s: batch_si,
+            self.local_network.allo: batch_allo,
             self.local_network.a: batch_a,
             self.local_network.td: batch_td,
             self.local_network.r: batch_R,
+            self.local_network.gauss_sigma: args.gauss_sigma,
             self.local_network.c_in: self.local_network.state_init[0],
             self.local_network.h_in: self.local_network.state_init[1],
             }

@@ -12,21 +12,20 @@ class BasicACNetwork(object):
         self._thread_index = thread_index
         self._name = "ACnet_" + str(self._thread_index)
 
-    def prepare_loss(self, entropy_beta):
-        # taken action (input for policy)
-        self.a = tf.placeholder("float", [None, self._action_size])
-
+    def prepare_loss(self, entropy_beta, risk_beta):
         # temporary difference (R-V) (input for policy)
         self.td = tf.placeholder("float", [None])
 
         # avoid NaN with clipping when value in pi becomes zero
         log_pi = tf.log(tf.clip_by_value(self.pi, 1e-20, 1.0))
 
+        # TODO Gaussian distribution entropy
         # policy entropy
-        entropy = -tf.reduce_sum(self.pi * log_pi, reduction_indices=1)
+        # entropy = -tf.reduce_sum(self.pi * log_pi, reduction_indices=1)
 
         # policy loss (output)  (Adding minus, because the original paper's objective function is for gradient ascent, but we use gradient descent optimizer.)
-        policy_loss = - tf.reduce_sum( tf.reduce_sum( tf.multiply( log_pi, self.a ), reduction_indices=1 ) * self.td + entropy * args.entropy_beta )
+        # policy_loss = - tf.reduce_sum( log_pi * self.td + entropy * args.entropy_beta )
+        policy_loss = - tf.reduce_sum(log_pi * self.td)
 
         # R (input for value)
         self.r = tf.placeholder("float", [None])
@@ -35,14 +34,13 @@ class BasicACNetwork(object):
         # (Learning rate for Critic is half of Actor's, so multiply by 0.5)
         value_loss = 0.5 * tf.nn.l2_loss(self.r - self.v)
 
+        # l1 loss for gauss_mean
+        # self.gauss_mean shape [steps, action_size-1]
+        action_mean = tf.concat([self.gauss_mean, 1-tf.reduce_sum(self.gauss_mean, axis=1, keep_dims=True)], axis=1)
+        risk_loss = risk_beta * tf.reduce_sum(tf.abs(action_mean))
+
         # gradienet of policy and value are summed up
-        self.total_loss = policy_loss + value_loss
-
-    def run_policy_and_value(self, sess, s_t):
-        raise NotImplementedError()
-
-    def run_value(self, sess, s_t):
-        raise NotImplementedError()
+        self.total_loss = policy_loss + value_loss + risk_loss
 
     def sync_from(self, src_netowrk, name=None):
         '''
@@ -95,31 +93,65 @@ class LSTM_ACNetwork(BasicACNetwork):
                       time_major = False)
                 # lstm_outputs shape [steps, lstm_unit]
                 lstm_outputs = tf.reshape(lstm_outputs, [-1, args.lstm_unit])
+
+            with tf.variable_scope('Allocation_state') as vs:
+                self.allo = tf.placeholder(tf.float32, [None, self._action_size])
+                all_state = tf.concat([lstm_outputs, self.allo], axis=1)
+                W_fc0, b_fc0 = self._fc_variable([args.lstm_unit+self._action_size, args.state_feature_num])
+                self.state_feature = tf.nn.relu(tf.matmul(all_state, W_fc0) + b_fc0)
+
             with tf.variable_scope('FC_policy') as vs:
-                W_fc1, b_fc1 = self._fc_variable([args.lstm_unit, action_size])
-                self.pi = tf.nn.softmax(tf.matmul(lstm_outputs, W_fc1) + b_fc1)
+                # the network will output the gaussian mean of size action_size-1
+                W_fc1, b_fc1 = self._fc_variable([args.state_feature_num, action_size-1])
+                # get the mean of gauss distribution
+                # self.gauss_mean has shape [steps, action_size-1]
+                self.gauss_mean = tf.matmul(self.state_feature, W_fc1) + b_fc1
+
+                # Now calculate the pi for a given action
+                # a has shape [steps, action_size]
+                # given a, calculate the probability of a
+                self.a = tf.placeholder(tf.float32, [None, self._action_size])
+                # a_gauss_part has shape [steps, action_size-1]
+                a_gauss_part = self.a[:,:-1]
+                self.gauss_sigma = tf.placeholder("float",shape=[self._action_size-1,self._action_size-1])
+                gauss_coefficient = 1.0 / (((2.0 * np.pi) ** (self._action_size / 2.0 )) * tf.sqrt(tf.reduce_sum(tf.square(self.gauss_sigma))))
+                # gauss_bias shape [steps, action_size-1]
+                gauss_bias = a_gauss_part - self.gauss_mean
+                # shape [steps, action_size-1]
+                temp = tf.matmul(gauss_bias, tf.pow(self.gauss_sigma,-1))
+                # shape [steps]
+                temp = tf.reduce_sum(tf.multiply(temp, gauss_bias),axis=1)
+                # shape [steps]
+                self.pi = gauss_coefficient * tf.exp(-0.5*temp)
+
             with tf.variable_scope('FC_value') as vs:
-                W_fc2, b_fc2 = self._fc_variable([args.lstm_unit, 1])
-                v_ = tf.nn.softmax(tf.matmul(lstm_outputs,W_fc2) + b_fc2)
+                W_fc2, b_fc2 = self._fc_variable([args.state_feature_num, 1])
+                v_ = tf.matmul(self.state_feature,W_fc2) + b_fc2
+                # self.v has shape [steps, ]
                 self.v = tf.reshape(v_, [-1])
+
             self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope.name)
             self.reset_state_value()
+
     def reset_state_value(self):
         self.state_value = self.state_init
-    def run_policy_and_value(self, sess, s_t):
+
+    def run_policy_and_value(self, sess, s_t, allocation):
         # forward propagation, use the state in last step
         feed_dict = {
             self.s : [s_t],
+            self.allo : [allocation],
             self.c_in : self.state_value[0],
             self.h_in : self.state_value[1]
         }
-        pi_value, v_value, self.state_value = sess.run([self.pi, self.v, self.lstm_state],feed_dict = feed_dict)
-        return (pi_value[0], v_value[0])
-    def run_value(self, sess, s_t):
+        gauss_mean_value, v_value, self.state_value = sess.run([self.gauss_mean, self.v, self.lstm_state],feed_dict = feed_dict)
+        return (gauss_mean_value[0], v_value[0])
+    def run_value(self, sess, s_t, allocation):
         # when calculate the value of a certain state
         # this funcation won't update the state
         feed_dict = {
             self.s : [s_t],
+            self.allo : [allocation],
             self.c_in : self.state_value[0],
             self.h_in : self.state_value[1]
         }

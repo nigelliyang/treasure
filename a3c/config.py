@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import os
 
 cwd = os.getcwd()
@@ -10,21 +11,25 @@ parser.add_argument('--game', type=str, default='CartPole-v0',
 parser.add_argument('--use_gpu', type=bool, default=False)
 
 # model parameters
-parser.add_argument('--use_lstm', type=bool, default=True,
-                    help='wether use lstm network')
-parser.add_argument('--lstm_unit', type=int, default=20,
-                    help='lstm unit')
-parser.add_argument('--input_size', type=int, default=4,
-                    help='input size')
-parser.add_argument('--gamma', type=float, default=0.99)
+parser.add_argument('--lstm_unit', type=int, default=128,
+                    help='the output size of lstm')
+parser.add_argument('--state_feature_num', type=int, default=64,
+                    help='the num of feature extracted from both state and allocation')
+parser.add_argument('--input_size', type=int, default=60,
+                    help='input size = asset num * info num')
 parser.add_argument('--entropy_beta', type=float, default=0.01)
 
+# finance parameters
+parser.add_argument('--gamma', type=float, default=0.9999,
+                    help='daily discount rate, 0.9999 equals to capital return rate 103.7% per year')
+parser.add_argument('--risk_beta', type=float, default=0.01,
+                    help='the multiplier for gauss mean l1 loss, represents the risk preference, greater risk_beta means safer')
 # train parameters
 parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
 parser.add_argument('--max_time_step', type=int, default=10*10**7)
 parser.add_argument('--learning_rate', type=float, default=0.0001)
-parser.add_argument('--thread_num', type=int, default=8)
+parser.add_argument('--thread_num', type=int, default=4)
 
 # log parameters
 parser.add_argument('--log_interval', type=int, default=2000,
@@ -42,9 +47,7 @@ parser.add_argument('--grad_norm_clip', type=float, default=40.0)
 
 args = parser.parse_args()
 
-# game conf
-keymap = {'CartPole-v0': [0, 1]}
-
 # additional parameters
-args.action_size = len(keymap[args.game])
-args.action_map = keymap[args.game]
+args.action_size = 7
+args.gauss_sigma = np.eye(args.action_size-1)
+
