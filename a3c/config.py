@@ -28,7 +28,7 @@ parser.add_argument('--risk_beta', type=float, default=0.01,
 parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
 parser.add_argument('--max_time_step', type=int, default=10*10**7)
-parser.add_argument('--learning_rate', type=float, default=0.0001)
+parser.add_argument('--learning_rate', type=float, default=0.001)
 parser.add_argument('--thread_num', type=int, default=4)
 
 # log parameters
@@ -49,5 +49,5 @@ args = parser.parse_args()
 
 # additional parameters
 args.action_size = 7
-args.gauss_sigma = np.eye(args.action_size-1)
+args.gauss_sigma = 0.5*np.eye(args.action_size-1)
 

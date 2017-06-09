@@ -46,6 +46,16 @@ def SCOT(f, len_a, beta):
 
     return alpha, D
 
+class invest_monitor(object):
+    def __init__(self, max_len):
+        self._observation = []
+        self._max_len = max_len
+    def insert(self, observation):
+        self._observation.append(observation)
+        if len(self._observation) >= self._max_len:
+            print("resent %d investments return: %.3f" %(len(self._observation), sum(self._observation)/len(self._observation)))
+            self._observation = []
+
 # summary and ckpt saver
 # merged = tf.summary.merge_all()
 # summaryWriter = tf.summary.FileWriter(summary_dir, tf.get_default_graph())

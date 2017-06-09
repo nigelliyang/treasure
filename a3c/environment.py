@@ -48,7 +48,7 @@ class futuresGame:
         for i in range(0,self.mFuturesNum):
             self.mAssetAllocation[i] = newContrib[i] / newProperty
         if self.mSupportEmpty == 1:
-            self.mAssetAllocation[-1] = action[-1] / self.mProperty * newProperty
+            self.mAssetAllocation[-1] = action[-1] * self.mProperty / newProperty
         self.mPrice = newPrice
         self.mProperty = newProperty
 

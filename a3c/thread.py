@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from network import LSTM_ACNetwork
+import utils
 from config import *
 from environment import *
 from futuresData import *
@@ -21,11 +22,8 @@ class TrainingThread(object):
 
         self.opt = optimizer
         local_gradients = self.opt.compute_gradients(self.local_network.total_loss, self.local_network.vars)
-        self.gradients = local_gradients
-        # TODO: fix the clip by norm
-        # The clip by norm function has been turned off
-        # because this operator will cause nan output
-        # self.gradients = [(tf.clip_by_norm(local_gradients[i][0], args.grad_norm_clip), global_network.vars[i]) for i in range(len(local_gradients))]
+        # self.gradients = local_gradients
+        self.gradients = [(tf.clip_by_norm(local_gradients[i][0], args.grad_norm_clip), global_network.vars[i]) for i in range(len(local_gradients))]
         self.apply_gradients = self.opt.apply_gradients(self.gradients)
 
         self.sync = self.local_network.sync_from(global_network)
@@ -41,12 +39,19 @@ class TrainingThread(object):
 
         self.local_t = 0
 
-    def choose_action(self, gauss_mean, gauss_sigma):
+        self.monitor = utils.invest_monitor(10)
+
+    def choose_action(self, gauss_mean, gauss_sigma, determinate_action=False):
         '''
         :param guass_mean:  array [] ndarray
         :param guass_sigma: matrix like [[],[],[]] ndarray
         :return: ndarray
         '''
+
+        # if use determinate policy, return the mean value directly
+        if determinate_action:
+            return np.append(gauss_mean, 1-np.sum(gauss_mean))
+
         max_times = 1000
         def check(values):
             for a in values:
@@ -60,7 +65,34 @@ class TrainingThread(object):
             if check(values):
                 return values
         print('bad luck for choosing %d times not find a good assignment, so return the guass_mean' % max_times)
-        return np.append(gauss_mean + 1-np.sum(gauss_mean))
+        return np.append(gauss_mean, 1-np.sum(gauss_mean))
+
+    def random_choose_action(self):
+        action = np.random.random(args.action_size)
+        action = action/np.sum(action)
+        return action
+
+    def determinate_test(self, sess, random = False):
+        # random = False -> use the determinate_action
+        # random = True -> use the totally random action, not the Gaussian distribution
+
+        sess.run(self.sync)
+        self.state = self.env.reset()
+        self.local_network.reset_state_value()
+        self.allocation = self.init_allocation
+        self.terminal = False
+        episode_reward = 1
+        while not self.terminal:
+            gauss_mean, _ = self.local_network.run_policy_and_value(sess, self.state, self.allocation)
+            if random:
+                action = self.random_choose_action()
+            else:
+                action = self.choose_action(gauss_mean, args.gauss_sigma, determinate_action=True)
+            # reward is the neat return rate of capital, like 0.03
+            self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
+            episode_reward *= (1.0+reward)
+        return episode_reward
+
 
     def process(self, sess, global_t):
         previous_t = self.local_t
@@ -94,7 +126,8 @@ class TrainingThread(object):
             rewards.append(reward)
             self.local_t += 1
             if self.terminal:
-                print("return rate = {}".format(self.episode_reward))
+                self.monitor.insert(self.episode_reward)
+                # print("action = ", action, " value = ", value_)
                 self.episode_reward = 1.0
                 break
 
@@ -137,6 +170,7 @@ class TrainingThread(object):
             self.local_network.h_in: self.local_network.state_init[1],
             }
         sess.run(self.apply_gradients, feed_dict = feed_dict)
+        # print("gradient", sess.run(self.gradients,feed_dict = feed_dict))
 
         return self.local_t-previous_t
 

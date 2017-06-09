@@ -48,8 +48,7 @@ class futuresData:
                     self.mPrice.append(iprice)
                     i += 1
                     self.mLength += 1
-                    if i >= 100:
-                        break;
+
         print('[A3C_data]Successfully loaded ' + str(self.mLength) + ' data')
 
     def getObservation(self,time):

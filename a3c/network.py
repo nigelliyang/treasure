@@ -20,8 +20,10 @@ class BasicACNetwork(object):
         log_pi = tf.log(tf.clip_by_value(self.pi, 1e-20, 1.0))
 
         # TODO Gaussian distribution entropy
+        # gauss_sigma is a constant now, entropy is not trainable
+        # let gauss_sigma depends on state to train gauss_sigma
         # policy entropy
-        # entropy = -tf.reduce_sum(self.pi * log_pi, reduction_indices=1)
+        entropy = -tf.reduce_sum(0.5*self._action_size*(1+np.log(2*np.pi))+0.5*tf.log(tf.matrix_determinant(self.gauss_sigma)))
 
         # policy loss (output)  (Adding minus, because the original paper's objective function is for gradient ascent, but we use gradient descent optimizer.)
         # policy_loss = - tf.reduce_sum( log_pi * self.td + entropy * args.entropy_beta )
