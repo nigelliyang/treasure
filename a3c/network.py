@@ -19,7 +19,7 @@ class BasicACNetwork(object):
         # avoid NaN with clipping when value in pi becomes zero
         log_pi = tf.log(tf.clip_by_value(self.pi, 1e-20, 1.0))
 
-        # TODO Gaussian distribution entropy
+        # Gaussian distribution entropy
         # gauss_sigma is a constant now, entropy is not trainable
         # let gauss_sigma depends on state to train gauss_sigma
         # policy entropy
@@ -42,6 +42,7 @@ class BasicACNetwork(object):
         risk_loss = risk_beta * tf.reduce_sum(tf.abs(action_mean))
 
         # gradienet of policy and value are summed up
+        # self.total_loss = policy_loss+value_loss
         self.total_loss = policy_loss + value_loss + risk_loss
 
     def sync_from(self, src_netowrk, name=None):
@@ -95,6 +96,11 @@ class LSTM_ACNetwork(BasicACNetwork):
                       time_major = False)
                 # lstm_outputs shape [steps, lstm_unit]
                 lstm_outputs = tf.reshape(lstm_outputs, [-1, args.lstm_unit])
+            # self.c_in = tf.placeholder(tf.float32, [1, 10])
+            # self.h_in = tf.placeholder(tf.float32, [1, 10])
+            # self.state_init = 0
+            # W_fc,b_fc = self._fc_variable([args.input_size, args.lstm_unit])
+            # lstm_outputs = tf.matmul(self.s, W_fc)+b_fc
 
             with tf.variable_scope('Allocation_state') as vs:
                 self.allo = tf.placeholder(tf.float32, [None, self._action_size])
@@ -120,7 +126,7 @@ class LSTM_ACNetwork(BasicACNetwork):
                 # gauss_bias shape [steps, action_size-1]
                 gauss_bias = a_gauss_part - self.gauss_mean
                 # shape [steps, action_size-1]
-                temp = tf.matmul(gauss_bias, tf.pow(self.gauss_sigma,-1))
+                temp = tf.matmul(gauss_bias, tf.matrix_inverse(self.gauss_sigma))
                 # shape [steps]
                 temp = tf.reduce_sum(tf.multiply(temp, gauss_bias),axis=1)
                 # shape [steps]
