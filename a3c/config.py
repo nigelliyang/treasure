@@ -10,13 +10,19 @@ parser.add_argument('--game', type=str, default='CartPole-v0',
                     help='Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
 parser.add_argument('--use_gpu', type=bool, default=False)
 
+# input parameters
+parser.add_argument('--asset_num', type=int, default=5)
+parser.add_argument('--info_num', type=int, default=12)
+parser.add_argument('--input_size', type=int, default=60,
+                    help='input size = asset num * info num')
+
 # model parameters
+parser.add_argument('--lstm1_unit', type=int, default=128,
+                    help='the output size of lstm1')
 parser.add_argument('--lstm_unit', type=int, default=128,
                     help='the output size of lstm')
 parser.add_argument('--state_feature_num', type=int, default=64,
                     help='the num of feature extracted from both state and allocation')
-parser.add_argument('--input_size', type=int, default=60,
-                    help='input size = asset num * info num')
 parser.add_argument('--entropy_beta', type=float, default=0.01)
 
 # finance parameters
