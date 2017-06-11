@@ -14,7 +14,8 @@ class TrainingThread(object):
                  thread_index,
                  global_network,
                  optimizer,
-                 max_global_steps):
+                 max_global_steps,
+                 use_test_data=False):
         self.thread_index = thread_index
         self.max_global_steps = max_global_steps
         self.local_network = LSTM_ACNetwork(args.action_size, self.thread_index)
@@ -29,7 +30,7 @@ class TrainingThread(object):
         self.sync = self.local_network.sync_from(global_network)
 
         data = futuresData()
-        data.loadData_moreday0607()
+        data.loadData_moreday0607(use_test_data)
         self.env = futuresGame(data)
         self.terminal = True
         self.episode_reward = 1.0 # use multiplication model in futures game
@@ -64,7 +65,8 @@ class TrainingThread(object):
             values = np.append(values, 1-np.sum(values))
             if check(values):
                 return values
-        print('bad luck for choosing %d times not find a good assignment, so return the guass_mean' % max_times)
+        print('thread %d bad luck for choosing %d times not find a good assignment, so return the guass_mean' % (self.thread_index, max_times))
+        print('gaussian mean', gauss_mean)
         return np.append(gauss_mean, 1-np.sum(gauss_mean))
 
     def random_choose_action(self):
@@ -82,12 +84,16 @@ class TrainingThread(object):
         self.allocation = self.init_allocation
         self.terminal = False
         episode_reward = 1
+        log_count = 0
         while not self.terminal:
             gauss_mean, _ = self.local_network.run_policy_and_value(sess, self.state, self.allocation)
             if random:
                 action = self.random_choose_action()
             else:
                 action = self.choose_action(gauss_mean, args.gauss_sigma, determinate_action=True)
+            if log_count%10==0:
+                print("determinate test", gauss_mean)
+                log_count+=1
             # reward is the neat return rate of capital, like 0.03
             self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
             episode_reward *= (1.0+reward)

@@ -22,14 +22,14 @@ parser.add_argument('--entropy_beta', type=float, default=0.01)
 # finance parameters
 parser.add_argument('--gamma', type=float, default=0.9999,
                     help='daily discount rate, 0.9999 equals to capital return rate 103.7% per year')
-parser.add_argument('--risk_beta', type=float, default=0.01,
+parser.add_argument('--risk_beta', type=float, default=0.5,
                     help='the multiplier for gauss mean l1 loss, represents the risk preference, greater risk_beta means safer')
 # train parameters
 parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
 parser.add_argument('--max_time_step', type=int, default=10*10**7)
-parser.add_argument('--learning_rate', type=float, default=0.001)
-parser.add_argument('--thread_num', type=int, default=4)
+parser.add_argument('--learning_rate', type=float, default=0.0001)
+parser.add_argument('--thread_num', type=int, default=6)
 
 # log parameters
 parser.add_argument('--log_interval', type=int, default=2000,

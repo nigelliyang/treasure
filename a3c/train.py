@@ -30,7 +30,7 @@ for i in range(args.thread_num):
     thread = TrainingThread(i, global_network, grad_applier, args.max_time_step)
     local_networks.append(thread)
 
-test_determinate_network = TrainingThread(-2, global_network, grad_applier, args.max_time_step)
+test_determinate_network = TrainingThread(-2, global_network, grad_applier, args.max_time_step, use_test_data=True)
 
 # prepare session
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())

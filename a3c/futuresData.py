@@ -12,8 +12,12 @@ class futuresData:
         self.mDate = []
         self.mPrice = []
 
-    def loadData_moreday0607(self):
-        with open('./data/moreday0607.csv', encoding='utf8') as f:
+    def loadData_moreday0607(self, use_test_data):
+        if use_test_data:
+            data_dir = './data/moreday0607_test.csv'
+        else:
+            data_dir = './data/moreday0607_train.csv'
+        with open(data_dir, encoding='utf8') as f:
             print('[A3C_data]Loading data from data/moreday0607.csv ...')
             self.mFuturesNum = 6
             self.mInforFieldsNum = 10
