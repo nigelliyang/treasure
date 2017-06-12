@@ -8,6 +8,7 @@ import os
 import time
 from datetime import datetime
 
+from independentlstm import Independent_LSTM_ACNetwork
 from network import LSTM_ACNetwork
 from thread import TrainingThread
 from config import *
@@ -17,7 +18,8 @@ global_t = 0
 
 stop_requested = False
 
-global_network = LSTM_ACNetwork(args.action_size, -1)
+global_network = Independent_LSTM_ACNetwork(args.action_size, -1)
+#global_network = LSTM_ACNetwork(args.action_size, -1)
 
 grad_applier = tf.train.RMSPropOptimizer(
         learning_rate = args.learning_rate,

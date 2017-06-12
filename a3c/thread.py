@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from network import LSTM_ACNetwork
+from independentlstm import Independent_LSTM_ACNetwork
 import utils
 from config import *
 from environment import *
@@ -18,7 +19,8 @@ class TrainingThread(object):
                  use_test_data=False):
         self.thread_index = thread_index
         self.max_global_steps = max_global_steps
-        self.local_network = LSTM_ACNetwork(args.action_size, self.thread_index)
+        self.local_network = Independent_LSTM_ACNetwork(args.action_size, self.thread_index)
+        #self.local_network = LSTM_ACNetwork(args.action_size, self.thread_index)
         self.local_network.prepare_loss(args.entropy_beta, args.risk_beta)
 
         self.opt = optimizer
@@ -165,16 +167,31 @@ class TrainingThread(object):
         values.reverse()
         batch_vi = values
 
-        feed_dict = {
-            self.local_network.s: batch_si,
-            self.local_network.allo: batch_allo,
-            self.local_network.a: batch_a,
-            self.local_network.td: batch_td,
-            self.local_network.r: batch_R,
-            self.local_network.gauss_sigma: args.gauss_sigma,
-            self.local_network.c_in: self.local_network.state_init[0],
-            self.local_network.h_in: self.local_network.state_init[1],
-            }
+        feed_dict = {}
+        if type(self.local_network) == LSTM_ACNetwork:
+            feed_dict = {
+                self.local_network.s: batch_si,
+                self.local_network.allo: batch_allo,
+                self.local_network.a: batch_a,
+                self.local_network.td: batch_td,
+                self.local_network.r: batch_R,
+                self.local_network.gauss_sigma: args.gauss_sigma,
+                self.local_network.c_in: self.local_network.state_init[0],
+                self.local_network.h_in: self.local_network.state_init[1],
+                }
+        elif type(self.local_network) == Independent_LSTM_ACNetwork:
+            feed_dict = {
+                self.local_network.s: batch_si,
+                self.local_network.allo: batch_allo,
+                self.local_network.a: batch_a,
+                self.local_network.td: batch_td,
+                self.local_network.r: batch_R,
+                self.local_network.gauss_sigma: args.gauss_sigma,
+                self.local_network.lstm1_c_in: self.local_network.lstm1_c_init,
+                self.local_network.lstm1_h_in: self.local_network.lstm1_h_init,
+                }
+        else:
+            print ('Error:Unknown Network Type!')
         sess.run(self.apply_gradients, feed_dict = feed_dict)
         # print("gradient", sess.run(self.gradients,feed_dict = feed_dict))
 

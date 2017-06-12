@@ -17,7 +17,7 @@ parser.add_argument('--input_size', type=int, default=60,
                     help='input size = asset num * info num')
 
 # model parameters
-parser.add_argument('--lstm1_unit', type=int, default=128,
+parser.add_argument('--lstm1_unit', type=int, default=15,
                     help='the output size of lstm1')
 parser.add_argument('--lstm_unit', type=int, default=128,
                     help='the output size of lstm')

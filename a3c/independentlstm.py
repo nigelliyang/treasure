@@ -8,54 +8,54 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
         with tf.variable_scope(self._name) as scope:
             # s shape [steps, len]
             self.s = tf.placeholder(tf.float32, [None, args.input_size])
-            # lstm_in shape [batch, steps, len], where batch=1
-            lstm_in = tf.expand_dims(self.s, [0])
+            assert args.info_num * args.asset_num == args.input_size
+            # lstm1_in shape [batch, steps, len], where batch=1, len=info_num*asset_num
+            lstm1_in = tf.expand_dims(self.s, [0])
+            # lstm1_in_split[i] in shape [batch, steps, info_num], where batch=1
+            lstm1_in_split = tf.split(lstm1_in, args.asset_num, axis=2)
             with tf.variable_scope('LSTM1') as vs:
-                lstm_cell = rnn.BasicLSTMCell(num_units=args.lstm_unit, state_is_tuple=True)
-                c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
-                h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
-                self.state_init = [c_init, h_init]
-                self.c_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.c])
-                self.h_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.h])
-                state = rnn.LSTMStateTuple(self.c_in,self.h_in)
-                # lstm_outputs shape [1, steps, lstm_unit]
-                # lstm_state shape [(lstm_c, lstm_h)]
-                lstm_outputs, self.lstm_state = tf.nn.dynamic_rnn(
-                      lstm_cell,
-                      inputs = lstm_in,
-                      initial_state = state,
-                      time_major = False)
-                # lstm_outputs shape [steps, lstm_unit]
-                lstm_outputs = tf.reshape(lstm_outputs, [-1, args.lstm_unit])
+                lstm1_cell = rnn.BasicLSTMCell(num_units=args.lstm1_unit, state_is_tuple=True)
 
+                self.lstm1_c_init = np.zeros((args.asset_num, lstm1_cell.state_size.c), np.float32)
+                self.lstm1_h_init = np.zeros((args.asset_num, lstm1_cell.state_size.h), np.float32)
+                self.lstm1_c_in = tf.placeholder(tf.float32, [args.asset_num, lstm1_cell.state_size.c])
+                self.lstm1_h_in = tf.placeholder(tf.float32, [args.asset_num, lstm1_cell.state_size.h])
+                lstm1_c_in_split = tf.split(self.lstm1_c_in,args.asset_num,axis=0)
+                lstm1_h_in_split = tf.split(self.lstm1_h_in,args.asset_num,axis=0)
+                lstm1_c_split = []
+                lstm1_h_split = []
+                lstm1_output_split = []
 
-            with tf.variable_scope('LSTM2') as vs:
-                lstm_cell = rnn.BasicLSTMCell(num_units=args.lstm_unit, state_is_tuple=True)
-                c_init = np.zeros((1, lstm_cell.state_size.c), np.float32)
-                h_init = np.zeros((1, lstm_cell.state_size.h), np.float32)
-                self.state_init = [c_init, h_init]
-                self.c_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.c])
-                self.h_in = tf.placeholder(tf.float32, [1, lstm_cell.state_size.h])
-                state = rnn.LSTMStateTuple(self.c_in,self.h_in)
-                # lstm_outputs shape [1, steps, lstm_unit]
-                # lstm_state shape [(lstm_c, lstm_h)]
-                lstm_outputs, self.lstm_state = tf.nn.dynamic_rnn(
-                      lstm_cell,
-                      inputs = lstm_in,
-                      initial_state = state,
-                      time_major = False)
-                # lstm_outputs shape [steps, lstm_unit]
-                lstm_outputs = tf.reshape(lstm_outputs, [-1, args.lstm_unit])
-            # self.c_in = tf.placeholder(tf.float32, [1, 10])
-            # self.h_in = tf.placeholder(tf.float32, [1, 10])
-            # self.state_init = 0
-            # W_fc,b_fc = self._fc_variable([args.input_size, args.lstm_unit])
-            # lstm_outputs = tf.matmul(self.s, W_fc)+b_fc
+                for iAsset in range(args.asset_num):
+                    if iAsset > 0:
+                        tf.get_variable_scope().reuse_variables()
+                    c_in_i = lstm1_c_in_split[iAsset]
+                    h_in_i = lstm1_h_in_split[iAsset]
+                    statei_tuple = rnn.LSTMStateTuple(c_in_i ,h_in_i)
+                    # lstm1_outputi in shape [1, steps, lstm1_unit]
+                    # lstm1_statetuplei in shape [(lstm1_c, lstm1_h)]
+                    lstm1_outputi, lstm1_statetuplei = tf.nn.dynamic_rnn(
+                        lstm1_cell,
+                        inputs = lstm1_in_split[iAsset],
+                        initial_state = statei_tuple,
+                        time_major = False
+                    )
+                    lstm1_c_split.append(lstm1_statetuplei[0])
+                    lstm1_h_split.append(lstm1_statetuplei[1])
+                    lstm1_output_split.append(lstm1_outputi)
+                self.lstm1_c = tf.concat(lstm1_c_split,0)
+                self.lstm1_h = tf.concat(lstm1_h_split,0)
+
+                # lstm1_outpust in shape [1, steps, lstm1_unit * asset_num]
+                lstm1_outputs = tf.concat(lstm1_output_split,2)
+                # lstm1_outputs in shape [steps, lstm1_unit * asset_num]
+                lstm1_outputs = tf.reshape(lstm1_outputs, [-1, args.lstm1_unit * args.asset_num])
 
             with tf.variable_scope('Allocation_state') as vs:
                 self.allo = tf.placeholder(tf.float32, [None, self._action_size])
-                all_state = tf.concat([lstm_outputs, self.allo], axis=1)
-                W_fc0, b_fc0 = self._fc_variable([args.lstm_unit+self._action_size, args.state_feature_num])
+                # all_state in shape [steps, lstm1_unit * asset_num + action_size]
+                all_state = tf.concat([lstm1_outputs, self.allo], axis=1)
+                W_fc0, b_fc0 = self._fc_variable([args.lstm1_unit * args.asset_num +self._action_size, args.state_feature_num])
                 self.state_feature = tf.nn.relu(tf.matmul(all_state, W_fc0) + b_fc0)
 
             with tf.variable_scope('FC_policy') as vs:
@@ -92,17 +92,20 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
             self.reset_state_value()
 
     def reset_state_value(self):
-        self.state_value = self.state_init
+        self.lstm1_c_value = self.lstm1_c_init
+        self.lstm1_h_value = self.lstm1_h_init
 
     def run_policy_and_value(self, sess, s_t, allocation):
         # forward propagation, use the state in last step
         feed_dict = {
             self.s : [s_t],
             self.allo : [allocation],
-            self.c_in : self.state_value[0],
-            self.h_in : self.state_value[1]
+            self.lstm1_c_in: self.lstm1_c_value,
+            self.lstm1_h_in: self.lstm1_h_value
         }
-        gauss_mean_value, v_value, self.state_value = sess.run([self.gauss_mean, self.v, self.lstm_state],feed_dict = feed_dict)
+        gauss_mean_value, v_value, self.lstm1_c_value, self.lstm1_h_value = sess.run(
+            [self.gauss_mean, self.v, self.lstm1_c, self.lstm1_h],
+            feed_dict=feed_dict)
         return (gauss_mean_value[0], v_value[0])
     def run_value(self, sess, s_t, allocation):
         # when calculate the value of a certain state
@@ -110,8 +113,8 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
         feed_dict = {
             self.s : [s_t],
             self.allo : [allocation],
-            self.c_in : self.state_value[0],
-            self.h_in : self.state_value[1]
+            self.lstm1_c_in : self.lstm1_c_value,
+            self.lstm1_h_in : self.lstm1_h_value
         }
-        v_value, _ = sess.run([self.v, self.lstm_state],feed_dict = feed_dict)
+        v_value, _, __ = sess.run([self.v, self.lstm1_c, self.lstm1_h], feed_dict=feed_dict)
         return v_value[0]
