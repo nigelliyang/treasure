@@ -12,7 +12,7 @@ import signal
 from datetime import datetime
 from independentlstm import Independent_LSTM_ACNetwork
 from network import LSTM_ACNetwork
-from thread import TrainingThread
+from thread import TrainingThread, TestThread
 from config import *
 
 
@@ -36,7 +36,7 @@ for i in range(args.thread_num):
     thread = TrainingThread(i, global_network, grad_applier, args.max_time_step)
     local_networks.append(thread)
 
-test_determinate_network = TrainingThread(-2, global_network, grad_applier, args.max_time_step, use_test_data=True)
+test_determinate_network = TestThread(-2, global_network, grad_applier, args.max_time_step, use_test_data=True)
 test_determinate_network.monitor = utils.invest_monitor(save_dir='determinate_log')
 
 # prepare session
@@ -63,15 +63,18 @@ with tf.Session(config=config) as sess:
         global global_t
         tic = datetime.now()
         # give the benchmark return first
-        random_invest_return = network.determinate_test(sess, lazy=True)
-        print("benchmark return: %.3f" %random_invest_return)
+        benchmark_return = network.determinate_test(sess, lazy=True)
+        print("benchmark return: %.3f" %benchmark_return)
         # test the model every 30 seconds
         while True:
-            determinate_invest_return = network.determinate_test(sess, lazy=False)
+            if args.short_sight:
+                determinate_invest_return = network.short_sight_test(sess)
+            else:
+                determinate_invest_return = network.determinate_test(sess)
             toc = datetime.now()
             print("%s determinate policy return: %.3f" %(toc-tic, determinate_invest_return))
             if stop_requested or global_t > args.max_time_step:
-                network.monitor.save(file_name='test_log')
+                network.monitor.save(file_name=args.test_name)
                 break
             time.sleep(30)
 

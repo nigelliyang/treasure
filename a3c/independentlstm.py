@@ -128,6 +128,23 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
             [self.gauss_mean, self.v, self.lstm1_c, self.lstm1_h],
             feed_dict=feed_dict)
         return (gauss_mean_value[0], v_value[0])
+
+    def short_sight_run_policy_and_value(self, sess, s, allocations):
+        # forward propagation, s is the series of the most recent steps
+        # allocations are the most recent allocations
+        # but the output of this function only depends on the last allocation
+        feed_dict = {
+            self.s : s,
+            self.allo : allocations,
+            self.lstm1_c_in: self.lstm1_c_init,
+            self.lstm1_h_in: self.lstm1_h_init
+        }
+        if args.dropout:
+            feed_dict[self.keep_prob] = 1.0
+        gauss_mean_value, v_value = sess.run([self.gauss_mean, self.v],feed_dict=feed_dict)
+        # gauss_mean_value and v_value are lists contains all steps' results, so return the lastest one
+        return (gauss_mean_value[-1], v_value[-1])
+
     def run_value(self, sess, s_t, allocation):
         # when calculate the value of a certain state
         # this funcation won't update the state

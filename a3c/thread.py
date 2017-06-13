@@ -74,49 +74,6 @@ class TrainingThread(object):
         print('gaussian mean', gauss_mean)
         return np.append(gauss_mean, 1-np.sum(gauss_mean))
 
-    def lazy_choose_action(self):
-        # return uniform asset distribution
-        action = np.ones([args.action_size])
-        action = action/np.sum(action)
-        return action
-
-    def determinate_test(self, sess, lazy = False):
-        # random = False -> use the determinate_action
-        # random = True -> use the totally random action, not the Gaussian distribution
-
-        sess.run(self.sync)
-        self.state = self.env.reset()
-        self.local_network.reset_state_value()
-        self.allocation = self.init_allocation
-        self.terminal = False
-        episode_reward = 1
-        log_count = 0
-        records = []
-        while not self.terminal:
-            gauss_mean, _ = self.local_network.run_policy_and_value(sess, self.state, self.allocation)
-            if lazy:
-                action = self.lazy_choose_action()
-            else:
-                action = self.choose_action(gauss_mean, args.gauss_sigma, determinate_action=True)
-            if log_count%10==0:
-                # print("determinate test", gauss_mean)
-                log_count+=1
-            # reward is the neat return rate of capital, like 0.03
-            self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
-            episode_reward *= (1.0+reward)
-            # recording
-            # the first action_size elements are action
-            # -1 element is the net return
-            # -2 element is the leverage level
-            leverage = np.sum(np.abs(action))
-            record = np.append(np.append(action, leverage), reward)
-            records.append(record)
-        # record in shape [steps, action_size+2]
-        # invest_monitor._ovservation in shape [test_num, steps, action_size+2]
-        self.monitor.insert(records)
-        return episode_reward
-
-
     def process(self, sess, global_t):
         previous_t = self.local_t
 
@@ -214,6 +171,91 @@ class TrainingThread(object):
         # print("gradient", sess.run(self.gradients,feed_dict = feed_dict))
 
         return self.local_t-previous_t
+
+class TestThread(TrainingThread):
+    """docstring for testThread"""
+    def __init__(self,
+                 thread_index,
+                 global_network,
+                 optimizer,
+                 max_global_steps,
+                 use_test_data=False):
+        TrainingThread.__init__(self, thread_index, global_network, optimizer, max_global_steps, use_test_data)
+
+    def lazy_choose_action(self):
+        # return uniform asset distribution
+        action = np.ones([args.action_size])
+        action = action/np.sum(action)
+        return action
+
+    def determinate_test(self, sess, lazy = False):
+        # random = False -> use the determinate_action
+        # random = True -> use the totally random action, not the Gaussian distribution
+        sess.run(self.sync)
+        self.state = self.env.reset()
+        self.local_network.reset_state_value()
+        self.allocation = self.init_allocation
+        self.terminal = False
+        episode_reward = 1
+        log_count = 0
+        records = []
+        while not self.terminal:
+            gauss_mean, _ = self.local_network.run_policy_and_value(sess, self.state, self.allocation)
+            if lazy:
+                action = self.lazy_choose_action()
+            else:
+                action = self.choose_action(gauss_mean, args.gauss_sigma, determinate_action=True)
+            if log_count%10==0:
+                # print("determinate test", gauss_mean)
+                log_count+=1
+            # reward is the neat return rate of capital, like 0.03
+            self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
+            episode_reward *= (1.0+reward)
+            # recording
+            # the first action_size elements are action
+            # -1 element is the net return
+            # -2 element is the leverage level
+            leverage = np.sum(np.abs(action))
+            record = np.append(np.append(action, leverage), reward)
+            records.append(record)
+        # record in shape [steps, action_size+2]
+        # invest_monitor._ovservation in shape [test_num, steps, action_size+2]
+        self.monitor.insert(records)
+        return episode_reward
+
+    def short_sight_test(self, sess, short_sight_step=args.short_sight_step):
+        # In this test, the network ouly consider the most recent states
+        sess.run(self.sync)
+        self.init_state = self.env.reset()
+        self.states = np.array([self.init_state for _ in range(short_sight_step)])
+        self.allocations = np.array([self.init_allocation for _ in range(short_sight_step)])
+        self.terminal = False
+        episode_reward = 1
+        log_count = 0
+        records = []
+        while not self.terminal:
+            gauss_mean, _ = self.local_network.short_sight_run_policy_and_value(sess, self.states, self.allocations)
+            action = self.choose_action(gauss_mean, args.gauss_sigma, determinate_action=True)
+            # if log_count%10==0:
+            #     print("determinate test", gauss_mean)
+            #     log_count+=1
+            # reward is the neat return rate of capital, like 0.03
+            self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
+            self.states = np.append(self.states[1:,:], self.state[np.newaxis,:], axis=0)
+            self.allocations = np.append(self.allocations[1:,:], self.allocation[np.newaxis,:], axis=0)
+            episode_reward *= (1.0+reward)
+            # recording
+            # the first action_size elements are action
+            # -1 element is the net return
+            # -2 element is the leverage level
+            leverage = np.sum(np.abs(action))
+            record = np.append(np.append(action, leverage), reward)
+            records.append(record)
+        # record in shape [steps, action_size+2]
+        # invest_monitor._ovservation in shape [test_num, steps, action_size+2]
+        self.monitor.insert(records)
+        return episode_reward
+
 
 
 
