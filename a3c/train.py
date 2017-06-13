@@ -60,6 +60,7 @@ with tf.Session(config=config) as sess:
             global_t += diff_global_t
 
     def determinate_test(network):
+        global global_t
         tic = datetime.now()
         # give the benchmark return first
         random_invest_return = network.determinate_test(sess, lazy=True)
@@ -69,7 +70,7 @@ with tf.Session(config=config) as sess:
             determinate_invest_return = network.determinate_test(sess, lazy=False)
             toc = datetime.now()
             print("%s determinate policy return: %.3f" %(toc-tic, determinate_invest_return))
-            if stop_requested:
+            if stop_requested or global_t > args.max_time_step:
                 network.monitor.save(file_name='test_log')
                 break
             time.sleep(30)
