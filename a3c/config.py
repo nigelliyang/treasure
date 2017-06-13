@@ -8,21 +8,26 @@ parser = argparse.ArgumentParser()
 # env parameters
 parser.add_argument('--game', type=str, default='CartPole-v0',
                     help='Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
-parser.add_argument('--use_gpu', type=bool, default=False)
 
 # input parameters
-parser.add_argument('--asset_num', type=int, default=5)
-parser.add_argument('--info_num', type=int, default=12)
+parser.add_argument('--asset_num', type=int, default=6)
+parser.add_argument('--info_num', type=int, default=10)
 parser.add_argument('--input_size', type=int, default=60,
                     help='input size = asset num * info num')
 
 # model parameters
+parser.add_argument('--share_variable', type=bool, default=True,
+                    help='wether use the independent lstm')
+parser.add_argument('--dropout', type=bool, default=False,
+                    help='use droup_out')
 parser.add_argument('--lstm1_unit', type=int, default=15,
-                    help='the output size of lstm1')
+                    help='the output size of indepent_lstm1')
 parser.add_argument('--lstm_unit', type=int, default=128,
                     help='the output size of lstm')
 parser.add_argument('--state_feature_num', type=int, default=64,
                     help='the num of feature extracted from both state and allocation')
+parser.add_argument('--keep_prob', type=float, default=1.0,
+                    help='keep probability in droup out')
 parser.add_argument('--entropy_beta', type=float, default=0.01)
 
 # finance parameters
@@ -35,7 +40,7 @@ parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
 parser.add_argument('--max_time_step', type=int, default=10*10**7)
 parser.add_argument('--learning_rate', type=float, default=0.0001)
-parser.add_argument('--thread_num', type=int, default=6)
+parser.add_argument('--thread_num', type=int, default=3)
 
 # log parameters
 parser.add_argument('--log_interval', type=int, default=2000,

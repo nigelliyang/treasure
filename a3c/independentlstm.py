@@ -15,11 +15,17 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
             lstm1_in_split = tf.split(lstm1_in, args.asset_num, axis=2)
             with tf.variable_scope('LSTM1') as vs:
                 lstm1_cell = rnn.BasicLSTMCell(num_units=args.lstm1_unit, state_is_tuple=True)
-
+                # asset_num inputs using the same variable
+                # but the state are independent
+                # init state, np array
                 self.lstm1_c_init = np.zeros((args.asset_num, lstm1_cell.state_size.c), np.float32)
                 self.lstm1_h_init = np.zeros((args.asset_num, lstm1_cell.state_size.h), np.float32)
+                # state for the LSTM network
+                # they are placeholder because we need to define the inference later
                 self.lstm1_c_in = tf.placeholder(tf.float32, [args.asset_num, lstm1_cell.state_size.c])
                 self.lstm1_h_in = tf.placeholder(tf.float32, [args.asset_num, lstm1_cell.state_size.h])
+                # a list of tensors
+                # correspond to different asset
                 lstm1_c_in_split = tf.split(self.lstm1_c_in,args.asset_num,axis=0)
                 lstm1_h_in_split = tf.split(self.lstm1_h_in,args.asset_num,axis=0)
                 lstm1_c_split = []
@@ -27,10 +33,12 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
                 lstm1_output_split = []
 
                 for iAsset in range(args.asset_num):
+                    # every time call dynamic_rnn, will redefine the variables, so use reuse_variables to implement share variables
                     if iAsset > 0:
                         tf.get_variable_scope().reuse_variables()
                     c_in_i = lstm1_c_in_split[iAsset]
                     h_in_i = lstm1_h_in_split[iAsset]
+                    # concat c and h into a statetuple
                     statei_tuple = rnn.LSTMStateTuple(c_in_i ,h_in_i)
                     # lstm1_outputi in shape [1, steps, lstm1_unit]
                     # lstm1_statetuplei in shape [(lstm1_c, lstm1_h)]
@@ -40,9 +48,14 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
                         initial_state = statei_tuple,
                         time_major = False
                     )
+                    # the index of list is the num of asset
+                    # lstm1_output_split shape [asset_num, lstm1_outputi]
+                    # lstm1_outputi in shape [1, steps, lstm1_unit]
                     lstm1_c_split.append(lstm1_statetuplei[0])
                     lstm1_h_split.append(lstm1_statetuplei[1])
                     lstm1_output_split.append(lstm1_outputi)
+                # concat states
+                # self.lstm1_c and self.lstm1_h are operators, not value
                 self.lstm1_c = tf.concat(lstm1_c_split,0)
                 self.lstm1_h = tf.concat(lstm1_h_split,0)
 
@@ -57,6 +70,9 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
                 all_state = tf.concat([lstm1_outputs, self.allo], axis=1)
                 W_fc0, b_fc0 = self._fc_variable([args.lstm1_unit * args.asset_num +self._action_size, args.state_feature_num])
                 self.state_feature = tf.nn.relu(tf.matmul(all_state, W_fc0) + b_fc0)
+                if args.dropout:
+                    self.keep_prob = tf.placeholder(tf.float32, [])
+                    self.state_feature = tf.nn.dropout(self.state_feature, self.keep_prob)
 
             with tf.variable_scope('FC_policy') as vs:
                 # the network will output the gaussian mean of size action_size-1
@@ -92,6 +108,8 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
             self.reset_state_value()
 
     def reset_state_value(self):
+        # self.lstm1_c_value and self.lstm1_h_value
+        # are used to feed lstm state
         self.lstm1_c_value = self.lstm1_c_init
         self.lstm1_h_value = self.lstm1_h_init
 
@@ -103,6 +121,9 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
             self.lstm1_c_in: self.lstm1_c_value,
             self.lstm1_h_in: self.lstm1_h_value
         }
+        if args.dropout:
+            feed_dict[self.keep_prob] = 1.0
+
         gauss_mean_value, v_value, self.lstm1_c_value, self.lstm1_h_value = sess.run(
             [self.gauss_mean, self.v, self.lstm1_c, self.lstm1_h],
             feed_dict=feed_dict)
@@ -116,5 +137,8 @@ class Independent_LSTM_ACNetwork(BasicACNetwork):
             self.lstm1_c_in : self.lstm1_c_value,
             self.lstm1_h_in : self.lstm1_h_value
         }
-        v_value, _, __ = sess.run([self.v, self.lstm1_c, self.lstm1_h], feed_dict=feed_dict)
+        if args.dropout:
+            feed_dict[self.keep_prob] = 1.0
+
+        v_value, _, _ = sess.run([self.v, self.lstm1_c, self.lstm1_h], feed_dict=feed_dict)
         return v_value[0]

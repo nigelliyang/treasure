@@ -6,8 +6,10 @@ import random
 import math
 import os
 import time
-from datetime import datetime
+import utils
+import signal
 
+from datetime import datetime
 from independentlstm import Independent_LSTM_ACNetwork
 from network import LSTM_ACNetwork
 from thread import TrainingThread
@@ -18,8 +20,10 @@ global_t = 0
 
 stop_requested = False
 
-global_network = Independent_LSTM_ACNetwork(args.action_size, -1)
-#global_network = LSTM_ACNetwork(args.action_size, -1)
+if args.share_variable:
+    global_network = Independent_LSTM_ACNetwork(args.action_size, -1)
+else:
+    global_network = LSTM_ACNetwork(args.action_size, -1)
 
 grad_applier = tf.train.RMSPropOptimizer(
         learning_rate = args.learning_rate,
@@ -33,6 +37,7 @@ for i in range(args.thread_num):
     local_networks.append(thread)
 
 test_determinate_network = TrainingThread(-2, global_network, grad_applier, args.max_time_step, use_test_data=True)
+test_determinate_network.monitor = utils.invest_monitor(save_dir='determinate_log')
 
 # prepare session
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -56,13 +61,23 @@ with tf.Session(config=config) as sess:
 
     def determinate_test(network):
         tic = datetime.now()
-        random_invest_return = network.determinate_test(sess, random=True)
-        print("totally random investment return: %.3f" %random_invest_return)
+        # give the benchmark return first
+        random_invest_return = network.determinate_test(sess, lazy=True)
+        print("benchmark return: %.3f" %random_invest_return)
+        # test the model every 30 seconds
         while True:
-            determinate_invest_return = network.determinate_test(sess, random=False)
+            determinate_invest_return = network.determinate_test(sess, lazy=False)
             toc = datetime.now()
             print("%s determinate policy return: %.3f" %(toc-tic, determinate_invest_return))
+            if stop_requested:
+                network.monitor.save(file_name='test_log')
+                break
             time.sleep(30)
+
+    def signal_handler(signal, frame):
+        global stop_requested
+        print('You pressed Ctrl+C!')
+        stop_requested = True
 
     train_threads = []
     for i in range(args.thread_num):
@@ -72,6 +87,12 @@ with tf.Session(config=config) as sess:
     for t in train_threads:
         t.start()
     test_thread.start()
+
+    print('Press Ctrl+C to stop')
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.pause()
+    print('Now saving data. Please wait')
+    print('It may take a few seconds to finish the last test')
 
     for t in train_threads:
         t.join()

@@ -107,6 +107,9 @@ class LSTM_ACNetwork(BasicACNetwork):
                 all_state = tf.concat([lstm_outputs, self.allo], axis=1)
                 W_fc0, b_fc0 = self._fc_variable([args.lstm_unit+self._action_size, args.state_feature_num])
                 self.state_feature = tf.nn.relu(tf.matmul(all_state, W_fc0) + b_fc0)
+                if args.dropout:
+                    self.keep_prob = tf.placeholder(tf.float32, [])
+                    self.state_feature = tf.nn.dropout(self.state_feature, self.keep_prob)
 
             with tf.variable_scope('FC_policy') as vs:
                 # the network will output the gaussian mean of size action_size-1
@@ -152,10 +155,13 @@ class LSTM_ACNetwork(BasicACNetwork):
             self.c_in : self.state_value[0],
             self.h_in : self.state_value[1]
         }
+        if args.dropout:
+            feed_dict[self.keep_prob] = 1.0
+
         gauss_mean_value, v_value, self.state_value = sess.run([self.gauss_mean, self.v, self.lstm_state],feed_dict = feed_dict)
         return (gauss_mean_value[0], v_value[0])
     def run_value(self, sess, s_t, allocation):
-        # when calculate the value of a certain state
+        # call this function when calculate the value of a certain state
         # this funcation won't update the state
         feed_dict = {
             self.s : [s_t],
@@ -163,6 +169,9 @@ class LSTM_ACNetwork(BasicACNetwork):
             self.c_in : self.state_value[0],
             self.h_in : self.state_value[1]
         }
+        if args.dropout:
+            feed_dict[self.keep_prob] = 1.0
+
         v_value, _ = sess.run([self.v, self.lstm_state],feed_dict = feed_dict)
         return v_value[0]
 

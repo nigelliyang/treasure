@@ -1,5 +1,8 @@
 import tensorflow as tf
+import numpy as np
 import math
+import os
+import datetime
 
 def activation_tensor_summary(x):
     tf.summary.histogram(x.op.name+'/activations', x)
@@ -47,14 +50,31 @@ def SCOT(f, len_a, beta):
     return alpha, D
 
 class invest_monitor(object):
-    def __init__(self, max_len):
+    def __init__(self, max_len=None, save_dir='log'):
+        cwd = os.getcwd()
+        self.save_dir = os.path.join(cwd, save_dir)
         self._observation = []
-        self._max_len = max_len
+        if max_len:
+            self._max_len = max_len
+        else:
+            self._max_len = -1
     def insert(self, observation):
         self._observation.append(observation)
-        if len(self._observation) >= self._max_len:
+        if self._max_len >= 0 and len(self._observation) >= self._max_len:
             print("resent %d investments return: %.3f" %(len(self._observation), sum(self._observation)/len(self._observation)))
             self._observation = []
+    def save(self, file_name=None, log_info='None'):
+        if not tf.gfile.Exists(self.save_dir):
+            tf.gfile.MakeDirs(self.save_dir)
+        time_info = 'time:'+str(datetime.datetime.now())
+        log_info = 'log:'+log_info
+        if not file_name:
+            file_name = time_info
+        np.save(os.path.join(self.save_dir, file_name), np.array(self._observation))
+        print("saved log in %s" %os.path.join(self.save_dir, file_name))
+
+
+
 
 # summary and ckpt saver
 # merged = tf.summary.merge_all()

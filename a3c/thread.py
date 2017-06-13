@@ -19,7 +19,10 @@ class TrainingThread(object):
                  use_test_data=False):
         self.thread_index = thread_index
         self.max_global_steps = max_global_steps
-        self.local_network = Independent_LSTM_ACNetwork(args.action_size, self.thread_index)
+        if args.share_variable:
+            self.local_network = Independent_LSTM_ACNetwork(args.action_size, self.thread_index)
+        else:
+            self.local_network = LSTM_ACNetwork(args.action_size, self.thread_index)
         #self.local_network = LSTM_ACNetwork(args.action_size, self.thread_index)
         self.local_network.prepare_loss(args.entropy_beta, args.risk_beta)
 
@@ -42,7 +45,7 @@ class TrainingThread(object):
 
         self.local_t = 0
 
-        self.monitor = utils.invest_monitor(10)
+        self.monitor = utils.invest_monitor(max_len = 10)
 
     def choose_action(self, gauss_mean, gauss_sigma, determinate_action=False):
         '''
@@ -71,12 +74,13 @@ class TrainingThread(object):
         print('gaussian mean', gauss_mean)
         return np.append(gauss_mean, 1-np.sum(gauss_mean))
 
-    def random_choose_action(self):
-        action = np.random.random(args.action_size)
+    def lazy_choose_action(self):
+        # return uniform asset distribution
+        action = np.ones([args.action_size])
         action = action/np.sum(action)
         return action
 
-    def determinate_test(self, sess, random = False):
+    def determinate_test(self, sess, lazy = False):
         # random = False -> use the determinate_action
         # random = True -> use the totally random action, not the Gaussian distribution
 
@@ -87,18 +91,29 @@ class TrainingThread(object):
         self.terminal = False
         episode_reward = 1
         log_count = 0
+        records = []
         while not self.terminal:
             gauss_mean, _ = self.local_network.run_policy_and_value(sess, self.state, self.allocation)
-            if random:
-                action = self.random_choose_action()
+            if lazy:
+                action = self.lazy_choose_action()
             else:
                 action = self.choose_action(gauss_mean, args.gauss_sigma, determinate_action=True)
             if log_count%10==0:
-                print("determinate test", gauss_mean)
+                # print("determinate test", gauss_mean)
                 log_count+=1
             # reward is the neat return rate of capital, like 0.03
             self.state, self.allocation, reward, self.terminal, _ = self.env.step(action)
             episode_reward *= (1.0+reward)
+            # recording
+            # the first action_size elements are action
+            # -1 element is the net return
+            # -2 element is the leverage level
+            leverage = np.sum(np.abs(action))
+            record = np.append(np.append(action, leverage), reward)
+            records.append(record)
+        # record in shape [steps, action_size+2]
+        # invest_monitor._ovservation in shape [test_num, steps, action_size+2]
+        self.monitor.insert(records)
         return episode_reward
 
 
@@ -192,6 +207,9 @@ class TrainingThread(object):
                 }
         else:
             print ('Error:Unknown Network Type!')
+        if args.dropout:
+            feed_dict[self.local_network.keep_prob] = 0.5
+
         sess.run(self.apply_gradients, feed_dict = feed_dict)
         # print("gradient", sess.run(self.gradients,feed_dict = feed_dict))
 
