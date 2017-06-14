@@ -23,7 +23,7 @@ class BasicACNetwork(object):
         # gauss_sigma is a constant now, entropy is not trainable
         # let gauss_sigma depends on state to train gauss_sigma
         # policy entropy
-        entropy = -tf.reduce_sum(0.5*self._action_size*(1+np.log(2*np.pi))+0.5*tf.log(tf.matrix_determinant(self.gauss_sigma)))
+        # entropy = -tf.reduce_sum(0.5*self._action_size*(1+np.log(2*np.pi))+0.5*tf.log(tf.matrix_determinant(self.gauss_sigma)))
 
         # policy loss (output)  (Adding minus, because the original paper's objective function is for gradient ascent, but we use gradient descent optimizer.)
         # policy_loss = - tf.reduce_sum( log_pi * self.td + entropy * args.entropy_beta )
@@ -65,8 +65,8 @@ class BasicACNetwork(object):
     def _fc_variable(self, weight_shape):
         d = 1.0 / np.sqrt(weight_shape[0])
         bias_shape = [weight_shape[1]]
-        weight = tf.Variable(tf.random_uniform(weight_shape, minval=-d, maxval=d))
-        bias   = tf.Variable(tf.random_uniform(bias_shape,   minval=-d, maxval=d))
+        weight = tf.Variable(tf.random_uniform(weight_shape, minval=-d, maxval=d), name='weights')
+        bias   = tf.Variable(tf.random_uniform(bias_shape,   minval=-d, maxval=d), name='bias')
         return weight, bias
 
 

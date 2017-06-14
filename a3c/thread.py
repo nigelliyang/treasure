@@ -127,8 +127,14 @@ class TrainingThread(object):
             # the trade period is very short, the discount should be a really small value
             R = (1+ri) * args.gamma * R
             td = R - Vi
-            batch_td.append(td)
             batch_R.append(R)
+            if args.only_train_positive:
+                if td > 0:
+                    batch_td.append(td)
+                else:
+                    batch_td.append(0.0)
+            else:
+                batch_td.append(td)
 
         batch_td.reverse()
         batch_R.reverse()

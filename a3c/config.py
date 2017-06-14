@@ -20,11 +20,11 @@ parser.add_argument('--share_variable', type=bool, default=True,
                     help='wether use the independent lstm')
 parser.add_argument('--dropout', type=bool, default=False,
                     help='use droup_out')
-parser.add_argument('--short_sight', type=bool, default=True,
+parser.add_argument('--short_sight', type=bool, default=False,
                     help='lookfoward only a few steps')
 parser.add_argument('--lstm1_unit', type=int, default=15,
                     help='the output size of indepent_lstm1')
-parser.add_argument('--lstm_unit', type=int, default=128,
+parser.add_argument('--lstm_unit', type=int, default=64,
                     help='the output size of lstm')
 parser.add_argument('--state_feature_num', type=int, default=64,
                     help='the num of feature extracted from both state and allocation')
@@ -45,6 +45,8 @@ parser.add_argument('--local_t_max', type=int, default=32,
 parser.add_argument('--max_time_step', type=int, default=10*10**5)
 parser.add_argument('--learning_rate', type=float, default=0.0005)
 parser.add_argument('--thread_num', type=int, default=4)
+parser.add_argument('--sigma', type=float, default=1.0,
+                    help='init sigma as sigme*I')
 
 # log parameters
 # the directory saved ckpt is joined by two parts
@@ -52,7 +54,7 @@ parser.add_argument('--thread_num', type=int, default=4)
 # this design is for the convenient of various test
 parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints')
 parser.add_argument('--use_checkpoint', type=bool, default='False')
-parser.add_argument('--test_steps', type=int, default=1000)
+parser.add_argument('--test_steps', type=int, default=5000)
 parser.add_argument('--test_name', type=str, default='latest_test')
 
 # gradient applier parameters
@@ -64,5 +66,6 @@ args = parser.parse_args()
 
 # additional parameters
 args.action_size = 7
-args.gauss_sigma = 1*np.eye(args.action_size-1)
+args.gauss_sigma = args.sigma*np.eye(args.action_size-1)
+args.only_train_positive = True
 

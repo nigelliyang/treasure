@@ -49,10 +49,10 @@ with tf.Session(config=config) as sess:
     # if use checkpoint is required, restore the checkpoint
     if args.use_checkpoint:
         ckpt = tf.train.get_checkpoint_state(os.path.join(args.checkpoint_dir, args.test_name))
-        if ckpt and ckpt.model_checkpoint_path:
+        if ckpt:
             saver.restore(sess, ckpt.model_checkpoint_path)
             global_t = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
-        print("Load ckpt form ", ckpt.model_checkpoint_path)
+            print("Load ckpt form ", ckpt.model_checkpoint_path)
 
     def train(thread_index):
         global global_t
@@ -87,7 +87,7 @@ with tf.Session(config=config) as sess:
                     determinate_invest_return = network.determinate_test(sess)
                 toc = datetime.now()
                 print("%s step %d determinate policy return: %.3f" %(toc-tic, global_t, determinate_invest_return))
-            prev_global_t = global_t
+                prev_global_t = global_t
             time.sleep(3)
 
     def signal_handler(signal, frame):
