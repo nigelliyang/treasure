@@ -1,0 +1,6 @@
+Namespace(action_size=7, asset_num=6, checkpoint_dir='./checkpoints', dropout=False, entropy_beta=0.01, game='CartPole-v0', gamma=0.9999, gauss_sigma=array([[ 1.,  0.,  0.,  0.,  0.,  0.],
+       [ 0.,  1.,  0.,  0.,  0.,  0.],
+       [ 0.,  0.,  1.,  0.,  0.,  0.],
+       [ 0.,  0.,  0.,  1.,  0.,  0.],
+       [ 0.,  0.,  0.,  0.,  1.,  0.],
+       [ 0.,  0.,  0.,  0.,  0.,  1.]]), grad_norm_clip=40.0, info_num=10, input_size=60, keep_prob=0.5, learning_rate=0.0005, local_t_max=32, lstm1_unit=15, lstm_unit=128, max_time_step=1000000, risk_beta=0.1, rmsp_alpha=0.99, rmsp_epsilon=0.1, share_variable=True, short_sight=True, short_sight_step=30, state_feature_num=64, test_name='latest_test', test_steps=1000, thread_num=4, use_checkpoint=True)

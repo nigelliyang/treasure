@@ -47,10 +47,13 @@ parser.add_argument('--learning_rate', type=float, default=0.0005)
 parser.add_argument('--thread_num', type=int, default=4)
 
 # log parameters
-parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
-parser.add_argument('--log_file', type=str, default='tmp/a3c_log')
-parser.add_argument('--use_chechpoint', type=bool, default=False)
-parser.add_argument('--test_name', type=str, default='temp_test')
+# the directory saved ckpt is joined by two parts
+# the parent dir "checkpoint" and the identical dir "test_name"
+# this design is for the convenient of various test
+parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints')
+parser.add_argument('--use_checkpoint', type=bool, default='False')
+parser.add_argument('--test_steps', type=int, default=1000)
+parser.add_argument('--test_name', type=str, default='latest_test')
 
 # gradient applier parameters
 parser.add_argument('--rmsp_alpha', type=float, default=0.99)

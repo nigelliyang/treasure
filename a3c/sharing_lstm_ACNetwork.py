@@ -1,6 +1,6 @@
 from network import *
 
-class Independent_LSTM_ACNetwork(BasicACNetwork):
+class Sharing_LSTM_ACNetwork(BasicACNetwork):
     def __init__(self,
                  action_size,
                  thread_index):
