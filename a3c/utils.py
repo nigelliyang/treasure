@@ -20,7 +20,7 @@ def lr_anneal(ini_lr, end_lr, steps, global_step, type = 'linear'):
     else:
         raise KeyError('learning anneal type %s not supported' %type)
 
-def SCOT(f, len_a, beta):
+def SCOT(f, len_a, beta = 0.5):
     '''
     This function solve the following optimal problem using shrink
     min(alpha) ||Df-alpha||2 + beta*||alpha||1
