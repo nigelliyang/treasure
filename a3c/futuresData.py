@@ -135,7 +135,6 @@ class Futures_cn(object):
         if replace:
             self.days.remove(choice)
         tempdata = self.data_df[self.data_df['date'] == choice].values[:,2:]
-        print(len(tempdata))
         reshaped_data = tempdata.reshape((tempdata.shape[0],self.future_num,self.info_field_num))
         price = reshaped_data[:,:,0]
         firstprice = price[0:1,:]

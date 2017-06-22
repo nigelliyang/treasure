@@ -1,4 +1,6 @@
 from network import *
+import tensorflow as tf
+from tensorflow.contrib import rnn
 from direct_allocation_RNNCell import direct_allocation_RNNCell
 
 class Direct_Sharing_LSTM_ACNetwork(BasicACNetwork):
@@ -14,7 +16,9 @@ class Direct_Sharing_LSTM_ACNetwork(BasicACNetwork):
             # lstm1_in shape [batch, steps, len], where batch=1, len=info_num*asset_num
             lstm1_in = tf.expand_dims(self.s, [0])
             # lstm1_in_split[i] in shape [batch, steps, info_num], where batch=1
-            lstm1_in_split = tf.split(lstm1_in, asset_num, axis=2)
+            self.lstm1_in_split = tf.split(lstm1_in, asset_num, axis=2)
+            self.first_price = tf.placeholder(tf.float32, [1,asset_num])
+            self.next_price = tf.placeholder(tf.float32, [None, asset_num])
             with tf.variable_scope('LSTM1') as vs:
                 lstm1_cell = rnn.BasicLSTMCell(num_units=args.lstm1_unit, state_is_tuple=True)
                 # asset_num inputs using the same variable
@@ -32,9 +36,9 @@ class Direct_Sharing_LSTM_ACNetwork(BasicACNetwork):
                 # correspond to different asset
                 lstm1_c_in_split = tf.split(self.lstm1_c_in,asset_num,axis=0)
                 lstm1_h_in_split = tf.split(self.lstm1_h_in,asset_num,axis=0)
-                lstm1_c_split = []
-                lstm1_h_split = []
-                lstm1_output_split = []
+                self.lstm1_c_split = []
+                self.lstm1_h_split = []
+                self.lstm1_output_split = []
 
                 for iAsset in range(asset_num):
                     # every time call dynamic_rnn, will redefine the variables, so use reuse_variables to implement share variables
@@ -48,41 +52,37 @@ class Direct_Sharing_LSTM_ACNetwork(BasicACNetwork):
                     # lstm1_statetuplei in shape [(lstm1_c, lstm1_h)]
                     lstm1_outputi, lstm1_statetuplei = tf.nn.dynamic_rnn(
                         lstm1_cell,
-                        inputs = lstm1_in_split[iAsset],
+                        inputs = self.lstm1_in_split[iAsset],
                         initial_state = statei_tuple,
                         time_major = False
                     )
                     # the index of list is the num of asset
                     # lstm1_output_split shape [asset_num, lstm1_outputi]
                     # lstm1_outputi in shape [1, steps, lstm1_unit]
-                    lstm1_c_split.append(lstm1_statetuplei[0])
-                    lstm1_h_split.append(lstm1_statetuplei[1])
-                    lstm1_output_split.append(lstm1_outputi)
+                    self.lstm1_c_split.append(lstm1_statetuplei[0])
+                    self.lstm1_h_split.append(lstm1_statetuplei[1])
+                    self.lstm1_output_split.append(lstm1_outputi)
                 # concat states
                 # self.lstm1_c and self.lstm1_h are operators, not value
-                self.lstm1_c = tf.concat(lstm1_c_split,0)
-                self.lstm1_h = tf.concat(lstm1_h_split,0)
+                self.lstm1_c = tf.concat(self.lstm1_c_split,0)
+                self.lstm1_h = tf.concat(self.lstm1_h_split,0)
 
                 # lstm1_outpust in shape [1, steps, lstm1_unit * asset_num]
-                lstm1_outputs = tf.concat(lstm1_output_split,2)
+                self.lstm1_outputs = tf.concat(self.lstm1_output_split,2)
                 # lstm1_outputs in shape [steps, lstm1_unit * asset_num]
-                lstm1_outputs = tf.reshape(lstm1_outputs, [-1, args.lstm1_unit * asset_num])
+                self.lstm1_outputs = tf.reshape(self.lstm1_outputs, [-1, args.lstm1_unit * asset_num])
 
             with tf.variable_scope('Allocation_RNN') as vs:
-                allo_rnn = direct_allocation_RNNCell(args.lstm1_unit * asset_num)
+                allo_rnn = direct_allocation_RNNCell(args.lstm1_unit * asset_num, asset_num)
                 
                 self.allo_init = tf.concat(
                     [tf.constant(0,dtype = tf.float32, shape = [1,asset_num]),
                     tf.constant(1,dtype = tf.float32, shape = [1,1])],
                     axis = 1
                 )
-                print(self.allo_init.shape)
-                self.first_price = tf.placeholder(tf.float32, [1,asset_num])
-                self.next_price = tf.placeholder(tf.float32, [None, asset_num])
                 allo_rnn_state_init = tf.concat([self.first_price, self.allo_init], axis=1)
-                allo_rnn_input = tf.concat([self.next_price, lstm1_outputs], axis = 1)
-                print(allo_rnn_state_init.shape)
-                print(allo_rnn_input.shape)
+                allo_rnn_input = tf.concat([self.next_price, self.lstm1_outputs], axis = 1)
+                allo_rnn_input = tf.expand_dims(allo_rnn_input, [0])
 
                 self.allo_rnn_output,self.allo_rnn_state = tf.nn.dynamic_rnn(
                     allo_rnn,
@@ -90,10 +90,10 @@ class Direct_Sharing_LSTM_ACNetwork(BasicACNetwork):
                     initial_state = allo_rnn_state_init,
                     time_major= False
                 )
-                self.logrewards, self.actions = tf.split(self.allo_rnn_output, [1,asset_num + 1], axis = 1)
+                self.logrewards, self.actions = tf.split(self.allo_rnn_output, [1,asset_num + 1], axis = 2)
 
             self.totallogreward = tf.reduce_sum(self.logrewards)
             self.totalreward = tf.exp(self.totallogreward)
 
             self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope.name)
-            self.reset_state_value()
+            #self.reset_state_value()

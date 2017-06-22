@@ -32,20 +32,15 @@ grad_applier = tf.train.RMSPropOptimizer(
         momentum = 0.0,
         epsilon = args.rmsp_epsilon)
 
-optimizer = grad_applier.minimize(-network.totallogreward)
-
-# Evaluate model
-#correct_pred = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
-#accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-
-# Initializing the variables
-init = tf.global_variables_initializer()
+with tf.name_scope('direct_train') as vs:
+    optimizer = grad_applier.minimize(-network.totallogreward)
+    init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 
 training_iters = 10000
 display_step = 10
 # Launch the graph
 with tf.Session() as sess:
-    sess.run(init)
+    (sess.run(init_op))
     # Keep training until reach max iterations
     i = 0
     while i < training_iters:
@@ -56,7 +51,7 @@ with tf.Session() as sess:
                 network.first_price : firstprice,
                 network.next_price : nextprice
                 }
-        sess.run(optimizer, feed_dict=feed_dict)
+        _ = sess.run([optimizer], feed_dict=feed_dict)
         
         if i % display_step == 0:
             # Calculate reward
