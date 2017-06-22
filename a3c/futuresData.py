@@ -121,21 +121,45 @@ class Futures_cn(object):
         price = reshaped_data[:,:,0]
         return choice,price,reshaped_data
 
+    def extract_day_for_directTrain(self, day = None,replace = True):
+        '''
+        extract one day info
+        :param day: given day to extract or random extract
+        :param replace: replace or not
+        :return: ndarray (minutes per day, future_num * info_field_num)
+        '''
+        if len(self.days) == 0:
+            self.days = list(self.data_df['date'].values)
+
+        choice = day if day else np.random.choice(self.days)
+        if replace:
+            self.days.remove(choice)
+        tempdata = self.data_df[self.data_df['date'] == choice].values[:,2:]
+        print(len(tempdata))
+        reshaped_data = tempdata.reshape((tempdata.shape[0],self.future_num,self.info_field_num))
+        price = reshaped_data[:,:,0]
+        firstprice = price[0:1,:]
+        nextprice = price[1:,:]
+        tempdata_nolast = tempdata[0:len(tempdata)-1,:]
+        return choice,firstprice,nextprice,tempdata_nolast
+
 
 
 if __name__ == '__main__':
     c = Futures_cn()
     c.load_tranform(path_list)
-    for i in range(10):
-        choice,price,reshaped_data = c.extract_day()
-        print(choice)
-        print(reshaped_data.shape)
-        print(price.shape)
-        print(price)
-        print(reshaped_data[0])
+    #for i in range(10):
+        #choice,price,reshaped_data = c.extract_day()
+        #print(choice)
+        #print(reshaped_data.shape)
+        #print(price.shape)
+        #print(price)
+        #print(reshaped_data[0])
 
-
-
+    r1,r2,r3,r4 = c.extract_day_for_directTrain()
+    print(r2.shape)
+    print(r3.shape)
+    print(r4.shape)
 
 
 

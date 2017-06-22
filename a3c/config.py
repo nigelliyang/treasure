@@ -28,6 +28,8 @@ parser.add_argument('--lstm_unit', type=int, default=64,
                     help='the output size of lstm')
 parser.add_argument('--state_feature_num', type=int, default=64,
                     help='the num of feature extracted from both state and allocation')
+parser.add_argument('--alloRNN_fc0_output_dim', type=int, default=64,
+                    help='the dimention of fc0 of the direct allocation RNN')
 parser.add_argument('--keep_prob', type=float, default=0.5,
                     help='keep probability in droup out')
 parser.add_argument('--short_sight_step', type=int, default=30,
