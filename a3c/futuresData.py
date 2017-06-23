@@ -123,10 +123,16 @@ class Futures_cn(object):
 
     def extract_day_for_directTrain(self, day = None,replace = True):
         '''
-        extract one day info
+        extract one day info for direct_train.py
         :param day: given day to extract or random extract
         :param replace: replace or not
-        :return: ndarray (minutes per day, future_num * info_field_num)
+        :return:[
+          date that choiced,
+          price of first minutes as ndarray (1, future_num),
+          price of other minutes as ndarray (minutes_per_day-1, future_num),
+          info of first (minutes_per_day-1) minutes as ndarray (minutes_per_day - 1, future_num * info_field_num)
+          ]
+
         '''
         if len(self.days) == 0:
             self.days = list(self.data_df['date'].values)

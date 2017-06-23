@@ -10,9 +10,6 @@ import math
 import time
 import os
 
-from lstm_ACNetwork import LSTM_ACNetwork
-from thread import TrainingThread, TestThread
-from datetime import datetime
 from config import *
 from futuresData import Futures_cn
 from direct_sharing_lstm_ACNetwork import Direct_Sharing_LSTM_ACNetwork
@@ -24,7 +21,7 @@ path_list = [
 data = Futures_cn()
 data.load_tranform(path_list)
 
-network = Direct_Sharing_LSTM_ACNetwork(data.future_num, data.info_field_num, 0)
+network = Direct_Sharing_LSTM_ACNetwork(data.future_num, data.info_field_num)
 
 grad_applier = tf.train.RMSPropOptimizer(
         learning_rate = args.learning_rate,
@@ -35,12 +32,16 @@ grad_applier = tf.train.RMSPropOptimizer(
 with tf.name_scope('direct_train') as vs:
     optimizer = grad_applier.minimize(-network.totallogreward)
     init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
+    saver = tf.train.Saver()
 
 training_iters = 10000
 display_step = 10
 # Launch the graph
 with tf.Session() as sess:
-    (sess.run(init_op))
+    merged_summary_op = tf.merge_all_summaries()
+    summary_writer = tf.train.SummaryWriter('tb_logs', sess.graph)
+
+    sess.run(init_op)
     # Keep training until reach max iterations
     i = 0
     while i < training_iters:
@@ -54,14 +55,18 @@ with tf.Session() as sess:
         _ = sess.run([optimizer], feed_dict=feed_dict)
         
         if i % display_step == 0:
-            # Calculate reward
+            # Calculate reward of the day
             totalreward = sess.run(network.totalreward, feed_dict=feed_dict)
 
             print("Iter " + str(i) + ", daily reward = " + \
                   "{:.6f}".format(totalreward))
 
+            summary_str = sess.run(merged_summary_op)
+            summary_writer.add_summary(summary_str, totalreward)
+
         i = i + 1
     print("Optimization Finished!")
+    print('model saved in :', saver.save(sess, 'vars'))
 
     # Calculate accuracy
     #test_data = testset.data
