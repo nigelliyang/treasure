@@ -96,7 +96,7 @@ class Futures_cn(object):
             temp_df = df_list[i]
             merge_df = pd.merge(merge_df,temp_df,how='inner',on=['date','time'])
 
-        merge_df.sort(columns = ['date','time'])
+        merge_df.sort_values(['date','time'])
         self.data_df = merge_df
         self.future_num = count
         self.info_field_num = len(used_items) - 2
