@@ -1,6 +1,6 @@
 
 from tensorflow.contrib import rnn
-from network import *
+from a3c.network import *
 from tensorflow.python.ops import init_ops
 from tensorflow.python.ops import variable_scope
 
@@ -49,7 +49,7 @@ class direct_allocation_RNNCell(rnn.RNNCell):
 
         # Avoid the [0,0,...,0] condition leaded 0/0 error
         normal_item = tf.concat(
-                    [tf.constant(0,dtype = tf.float32, shape = [1,asset_num]),
+                    [tf.constant(0,dtype = tf.float32, shape = [1,self._asset_num]),
                     tf.constant(0.1,dtype = tf.float32, shape = [1,1])],
                     axis = 1
                 )

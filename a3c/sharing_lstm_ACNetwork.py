@@ -1,4 +1,4 @@
-from network import *
+from a3c.network import *
 
 class Sharing_LSTM_ACNetwork(BasicACNetwork):
     def __init__(self,

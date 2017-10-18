@@ -1,8 +1,8 @@
 from network import LSTM_ACNetwork
 import utils
-from config import *
-from environment import *
-from futuresData import *
+from a3c.config import *
+from a3c.environment import *
+from a3c.futuresData import *
 
 import tensorflow as tf
 import numpy as np
@@ -11,7 +11,7 @@ import random
 local_network = LSTM_ACNetwork(args.action_size, 0)
 local_network.prepare_loss(args.entropy_beta, args.risk_beta)
 data = futuresData()
-data.loadData_moreday0607()
+data.loadData_moreday0607(False)
 env = futuresGame(data)
 s = env.reset()
 allo = np.random.random(args.action_size)

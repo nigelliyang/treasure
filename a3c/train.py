@@ -14,7 +14,7 @@ from sharing_lstm_ACNetwork import Sharing_LSTM_ACNetwork
 from lstm_ACNetwork import LSTM_ACNetwork
 from thread import TrainingThread, TestThread
 from datetime import datetime
-from config import *
+from a3c.config import *
 
 global_t = 0
 
@@ -105,8 +105,8 @@ with tf.Session(config=config) as sess:
     test_thread.start()
 
     print('Press Ctrl+C to stop')
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.pause()
+    # signal.signal(signal.SIGINT, signal_handler)
+    # signal.pause()
     print('Now saving data. Please wait')
     print('It may take a few seconds to finish the last test')
 

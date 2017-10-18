@@ -2,9 +2,9 @@
 from lstm_ACNetwork import LSTM_ACNetwork
 from sharing_lstm_ACNetwork import Sharing_LSTM_ACNetwork
 import utils
-from config import *
-from environment import *
-from futuresData import *
+from a3c.config import *
+from a3c.environment import *
+from a3c.futuresData import *
 
 import tensorflow as tf
 import numpy as np

@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.contrib import rnn
 import tensorflow.contrib.slim as slim
 import numpy as np
-from config import *
+from a3c.config import *
 
 class BasicACNetwork(object):
     def __init__(self,

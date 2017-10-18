@@ -1,7 +1,8 @@
 #from network import BasicACNetwork
 import tensorflow as tf
 from tensorflow.contrib import rnn
-from direct_allocation_RNNCell import direct_allocation_RNNCell
+from a3c.direct_allocation_RNNCell import direct_allocation_RNNCell
+from a3c.config import *
 
 class Direct_Sharing_LSTM_ACNetwork():#BasicACNetwork):
     def __init__(self,
@@ -101,5 +102,5 @@ class Direct_Sharing_LSTM_ACNetwork():#BasicACNetwork):
             self.totallogreward = tf.reduce_sum(self.logrewards)
             self.totalreward = tf.exp(self.totallogreward)
 
-            self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope.name)
+            self.vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, vs0.name)
             #self.reset_state_value()

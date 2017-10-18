@@ -10,7 +10,7 @@ class futuresGame:
         self.mData = data
         self.mFuturesNum = self.mData.mFuturesNum
         self.mInforFieldsNum = self.mData.mInforFieldsNum
-        self.ction_space = gym.spaces.box.Box(np.linspace(0,0,self.mFuturesNum+self.mSupportEmpty),np.linspace(1,1,self.mFuturesNum+1))
+        self.action_space = gym.spaces.box.Box(np.linspace(0,0,self.mFuturesNum+self.mSupportEmpty),np.linspace(1,1,self.mFuturesNum+1))
         self.observation_space = gym.spaces.box.Box(np.zeros(self.mInforFieldsNum * self.mFuturesNum),np.linspace(100000000,100000000,self.mInforFieldsNum * self.mFuturesNum))
 
     def reset(self, initProperty = 100000.0):

@@ -1,9 +1,9 @@
-from environment import *
-from fuguresData import *
+from a3c.environment import *
+from a3c.futuresData import *
 import numpy as np
 
 data = futuresData()
-data.loadData_moreday0607()
+data.loadData_moreday0607(False)
 
 env = futuresGame(data)
 obs = env.reset()
