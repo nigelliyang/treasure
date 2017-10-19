@@ -11,7 +11,7 @@ ANIMATION_PERIOD = 30
 
 data_dir = "./determinate_log"
 
-file_name = 'only_positive.npy'
+file_name = 'latest_test.npy'
 
 file_path = os.path.join(data_dir, file_name)
 
