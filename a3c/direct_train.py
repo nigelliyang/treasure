@@ -38,6 +38,7 @@ training_iters = 10000
 display_step = 10
 # Launch the graph
 with tf.Session() as sess:
+    tf.summary.scalar('tt', tf.constant(0, dtype=tf.float32))
     merged_summary_op = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter('tb_logs', sess.graph)
 
