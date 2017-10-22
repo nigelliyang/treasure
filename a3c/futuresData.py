@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import csv
+import coinmarketcap_usd_history
+import os
+
 
 class futuresData:
     def __init__(self):
@@ -11,6 +14,23 @@ class futuresData:
         self.mData = []
         self.mDate = []
         self.mPrice = []
+
+    def loadCryptocurrency(self, use_test_data):
+        if os.path.exists('./data/Cryptocurrency_test.csv'):
+            if use_test_data:
+                data_dir = './data/Cryptocurrency_test.csv'
+            else:
+                data_dir = './data/Cryptocurrency_train.csv'
+
+        else:
+            Cryptosymbols = ['bitcoin', 'Ethereum']
+            start_date = '2017-10-01'
+            end_date = '2017-12-31'
+            for sym in Cryptosymbols:
+                df = coinmarketcap_usd_history.main([sym, start_date, end_date, '--dataframe'])
+
+
+
 
     def loadData_moreday0607(self, use_test_data):
         if use_test_data:
@@ -31,13 +51,13 @@ class futuresData:
                     continue
                 else:
                     baddata = False
-                    idata = np.zeros([self.mFuturesNum,self.mInforFieldsNum])
+                    idata = np.zeros([self.mFuturesNum, self.mInforFieldsNum])
                     iprice = np.zeros(self.mFuturesNum)
-                    for j in range(0,self.mFuturesNum):
+                    for j in range(0, self.mFuturesNum):
                         dateidx = j * (self.mInforFieldsNum + 2)
-                        for k in range(0,self.mInforFieldsNum):
+                        for k in range(0, self.mInforFieldsNum):
                             istring = row[dateidx + k + 1]
-                            if len(istring) == 0 :
+                            if len(istring) == 0:
                                 baddata = True
                                 break
                             idata[j][k] = float(istring)
@@ -55,20 +75,23 @@ class futuresData:
 
         print('[A3C_data]Successfully loaded ' + str(self.mLength) + ' data')
 
-    def getObservation(self,time):
+    def getObservation(self, time):
         return self.mData[time]
 
-    def getPrice(self,time):
+    def getPrice(self, time):
         return self.mPrice[time]
 
 
 import pandas as pd
 from collections import defaultdict
 import numpy as np
+
 path_list = [
     'data/IC00.csv',
     'data/TF.csv',
 ]
+
+
 class Futures_cn(object):
     def __init__(self):
         self.data_df = None
@@ -76,7 +99,7 @@ class Futures_cn(object):
         self.info_field_num = 0
         self.days = []
 
-    def load_tranform(self,path_list,used_items = ['date','time','open','high','low','close','amount','volume']):
+    def load_tranform(self, path_list, used_items=['date', 'time', 'open', 'high', 'low', 'close', 'amount', 'volume']):
         '''
         transform the futures data.
         :param path_list:
@@ -91,19 +114,18 @@ class Futures_cn(object):
             df_list.append(temp_df)
             count += 1
         merge_df = df_list[0]
-        for i in range(1,len(df_list)):
+        for i in range(1, len(df_list)):
             # removed_columns.extend(['date_'+str(i),'time_'+str(i)])
             temp_df = df_list[i]
-            merge_df = pd.merge(merge_df,temp_df,how='inner',on=['date','time'])
+            merge_df = pd.merge(merge_df, temp_df, how='inner', on=['date', 'time'])
 
-        merge_df.sort_values(['date','time'])
+        merge_df.sort_values(['date', 'time'])
         self.data_df = merge_df
         self.future_num = count
         self.info_field_num = len(used_items) - 2
         self.days = list(self.data_df['date'].values)
 
-
-    def extract_day(self, day = None,replace = True):
+    def extract_day(self, day=None, replace=True):
         '''
         extract one day info
         :param day: given day to extract or random extract
@@ -116,12 +138,12 @@ class Futures_cn(object):
         choice = day if day else np.random.choice(self.days)
         if replace:
             self.days.remove(choice)
-        tempdata = self.data_df[self.data_df['date'] == choice].values[:,2:]
-        reshaped_data = tempdata.reshape((tempdata.shape[0],self.future_num,self.info_field_num))
-        price = reshaped_data[:,:,0]
-        return choice,price,reshaped_data
+        tempdata = self.data_df[self.data_df['date'] == choice].values[:, 2:]
+        reshaped_data = tempdata.reshape((tempdata.shape[0], self.future_num, self.info_field_num))
+        price = reshaped_data[:, :, 0]
+        return choice, price, reshaped_data
 
-    def extract_day_for_directTrain(self, day = None,replace = True):
+    def extract_day_for_directTrain(self, day=None, replace=True):
         '''
         extract one day info for direct_train.py
         :param day: given day to extract or random extract
@@ -140,33 +162,30 @@ class Futures_cn(object):
         choice = day if day else np.random.choice(self.days)
         if replace:
             self.days.remove(choice)
-        tempdata = self.data_df[self.data_df['date'] == choice].values[:,2:]
-        reshaped_data = tempdata.reshape((tempdata.shape[0],self.future_num,self.info_field_num))
-        price = reshaped_data[:,:,0]
-        firstprice = price[0:1,:]
-        nextprice = price[1:,:]
-        tempdata_nolast = tempdata[0:len(tempdata)-1,:]
-        return choice,firstprice,nextprice,tempdata_nolast
-
+        tempdata = self.data_df[self.data_df['date'] == choice].values[:, 2:]
+        reshaped_data = tempdata.reshape((tempdata.shape[0], self.future_num, self.info_field_num))
+        price = reshaped_data[:, :, 0]
+        firstprice = price[0:1, :]
+        nextprice = price[1:, :]
+        tempdata_nolast = tempdata[0:len(tempdata) - 1, :]
+        return choice, firstprice, nextprice, tempdata_nolast
 
 
 if __name__ == '__main__':
-    c = Futures_cn()
-    c.load_tranform(path_list)
-    #for i in range(10):
-        #choice,price,reshaped_data = c.extract_day()
-        #print(choice)
-        #print(reshaped_data.shape)
-        #print(price.shape)
-        #print(price)
-        #print(reshaped_data[0])
+    c = futuresData()
+    c.loadCryptocurrency(True)
 
-    r1,r2,r3,r4 = c.extract_day_for_directTrain()
+    # c = Futures_cn()
+    # c.load_tranform(path_list)
+    # for i in range(10):
+    # choice,price,reshaped_data = c.extract_day()
+    # print(choice)
+    # print(reshaped_data.shape)
+    # print(price.shape)
+    # print(price)
+    # print(reshaped_data[0])
+
+    r1, r2, r3, r4 = c.extract_day_for_directTrain()
     print(r2.shape)
     print(r3.shape)
     print(r4.shape)
-
-
-
-
-
