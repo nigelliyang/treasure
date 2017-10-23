@@ -10,9 +10,9 @@ parser.add_argument('--game', type=str, default='CartPole-v0',
                     help='Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
 
 # input parameters
-parser.add_argument('--asset_num', type=int, default=6)
-parser.add_argument('--info_num', type=int, default=10)
-parser.add_argument('--input_size', type=int, default=60,
+parser.add_argument('--asset_num', type=int, default=2)
+parser.add_argument('--info_num', type=int, default=3)
+parser.add_argument('--input_size', type=int, default=6,
                     help='input size = asset num * info num')
 
 # model parameters
@@ -44,7 +44,7 @@ parser.add_argument('--risk_beta', type=float, default=0.1,
 # train parameters
 parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
-parser.add_argument('--max_time_step', type=int, default=10*10**5)
+parser.add_argument('--max_time_step', type=int, default=10 * 10 ** 5)
 parser.add_argument('--learning_rate', type=float, default=0.0005)
 parser.add_argument('--thread_num', type=int, default=4)
 parser.add_argument('--sigma', type=float, default=1.0,
@@ -67,7 +67,7 @@ parser.add_argument('--grad_norm_clip', type=float, default=40.0)
 args = parser.parse_args()
 
 # additional parameters
-args.action_size = 7
-args.gauss_sigma = args.sigma*np.eye(args.action_size-1)
+args.action_size = args.asset_num + 1
+args.use_checkpoint = False
+args.gauss_sigma = args.sigma * np.eye(args.action_size - 1)
 args.only_train_positive = True
-

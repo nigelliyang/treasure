@@ -27,10 +27,10 @@ else:
 saver = tf.train.Saver(global_network.vars)
 
 grad_applier = tf.train.RMSPropOptimizer(
-        learning_rate = args.learning_rate,
-        decay = args.rmsp_alpha,
-        momentum = 0.0,
-        epsilon = args.rmsp_epsilon)
+    learning_rate=args.learning_rate,
+    decay=args.rmsp_alpha,
+    momentum=0.0,
+    epsilon=args.rmsp_epsilon)
 
 local_networks = []
 for i in range(args.thread_num):
@@ -42,9 +42,8 @@ test_determinate_network.monitor = utils.invest_monitor(save_dir='determinate_lo
 
 # prepare session
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-config = tf.ConfigProto(allow_soft_placement = True)
+config = tf.ConfigProto(allow_soft_placement=True)
 with tf.Session(config=config) as sess:
-
     sess.run(init_op)
     # if use checkpoint is required, restore the checkpoint
     if args.use_checkpoint:
@@ -53,6 +52,7 @@ with tf.Session(config=config) as sess:
             saver.restore(sess, ckpt.model_checkpoint_path)
             global_t = int(ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1])
             print("Load ckpt form ", ckpt.model_checkpoint_path)
+
 
     def train(thread_index):
         global global_t
@@ -68,13 +68,14 @@ with tf.Session(config=config) as sess:
             diff_global_t = network.process(sess, global_t)
             global_t += diff_global_t
 
+
     def determinate_test(network):
         global global_t
         prev_global_t = global_t
         tic = datetime.now()
         # give the benchmark return first
         benchmark_return = network.determinate_test(sess, lazy=True)
-        print("benchmark return: %.3f" %benchmark_return)
+        print("benchmark return: %.3f" % benchmark_return)
         # test the model every 30 seconds
         while True:
             if stop_requested or global_t > args.max_time_step:
@@ -86,14 +87,16 @@ with tf.Session(config=config) as sess:
                 else:
                     determinate_invest_return = network.determinate_test(sess)
                 toc = datetime.now()
-                print("%s step %d determinate policy return: %.3f" %(toc-tic, global_t, determinate_invest_return))
+                print("%s step %d determinate policy return: %.3f" % (toc - tic, global_t, determinate_invest_return))
                 prev_global_t = global_t
             time.sleep(3)
+
 
     def signal_handler(signal, frame):
         global stop_requested
         print('You pressed Ctrl+C!')
         stop_requested = True
+
 
     train_threads = []
     for i in range(args.thread_num):
@@ -121,5 +124,3 @@ with tf.Session(config=config) as sess:
     for t in train_threads:
         t.join()
     test_thread.join()
-
-

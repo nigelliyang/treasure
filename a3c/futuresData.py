@@ -3,6 +3,7 @@ import numpy as np
 import csv
 import coinmarketcap_usd_history
 import os
+from functools import reduce
 
 
 class futuresData:
@@ -16,21 +17,74 @@ class futuresData:
         self.mPrice = []
 
     def loadCryptocurrency(self, use_test_data):
-        if os.path.exists('./data/Cryptocurrency_test.csv'):
-            if use_test_data:
-                data_dir = './data/Cryptocurrency_test.csv'
-            else:
-                data_dir = './data/Cryptocurrency_train.csv'
+        Cryptosymbols = ['Bitcoin', 'Ethereum']
+        start_date = '2016-01-01'
+        mid_date = '2017-05-01'
+        end_date = '2017-10-31'
+        columnnames = ['Close', 'Averageclose', 'Volume']
+        rollingwindows = 5
 
+        if use_test_data:
+            data_dir = './data/Cryptocurrency_test.csv'
         else:
-            Cryptosymbols = ['bitcoin', 'Ethereum']
-            start_date = '2017-10-01'
-            end_date = '2017-12-31'
+            data_dir = './data/Cryptocurrency_train.csv'
+
+        keys_dict = {}
+        dfcrypto = []
+        if not os.path.exists('./data/Cryptocurrency.csv'):
             for sym in Cryptosymbols:
-                df = coinmarketcap_usd_history.main([sym, start_date, end_date, '--dataframe'])
+                dftemp = coinmarketcap_usd_history.main([sym, start_date, end_date, '--dataframe'])
+                dftemp['Averageclose'] = pd.rolling_mean(dftemp['Close'], window=rollingwindows)
+                dftemp.set_index('Date', inplace=True)
+                dftemp = dftemp[columnnames]
+                if len(dfcrypto) == 0:
+                    dfcrypto = dftemp
+                else:
+                    dftemp = pd.merge(dfcrypto, dftemp, left_index=True, right_index=True, sort=True)
 
+            dftemp.to_csv('./data/Cryptocurrency.csv')
+            dftemp_train = dftemp.loc[dftemp.index <= pd.to_datetime(mid_date)]
+            dftemp_train.to_csv('./data/Cryptocurrency_train.csv')
+            dftemp_test = dftemp.loc[dftemp.index > pd.to_datetime(mid_date)]
+            dftemp_test.to_csv('./data/Cryptocurrency_test.csv')
 
+        with open(data_dir, encoding='utf8') as f:
+            print('[A3C_data]Loading data from data/Cryptocurrency.csv ...')
+            self.mFuturesNum = len(Cryptosymbols)
+            self.mInforFieldsNum = len(columnnames)
+            self.mLength = 0
+            self.mPoundage = 0
+            reader = csv.reader(f)
+            i = 0
+            for row in reader:
+                if i <= rollingwindows:
+                    i += 1
+                    continue
+                else:
+                    baddata = False
+                    idata = np.zeros([self.mFuturesNum, self.mInforFieldsNum])
+                    iprice = np.zeros(self.mFuturesNum)
+                    for j in range(0, self.mFuturesNum):
+                        dateidx = j * (self.mInforFieldsNum)
+                        for k in range(0, self.mInforFieldsNum):
+                            istring = row[dateidx + k + 1]
+                            if len(istring) == 0:
+                                baddata = True
+                                break
+                            idata[j][k] = float(istring)
+                        if baddata == True:
+                            break
+                        iprice[j] = idata[j][0]
+                    if baddata == True:
+                        i += 1
+                        continue
+                    self.mData.append(idata.reshape(self.mFuturesNum * self.mInforFieldsNum))
+                    self.mDate.append(row[0])
+                    self.mPrice.append(iprice)
+                    i += 1
+                    self.mLength += 1
 
+        print('[A3C_data]Successfully loaded ' + str(self.mLength) + ' data')
 
     def loadData_moreday0607(self, use_test_data):
         if use_test_data:

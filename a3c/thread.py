@@ -35,7 +35,7 @@ class TrainingThread(object):
         self.sync = self.local_network.sync_from(global_network)
 
         data = futuresData()
-        data.loadData_moreday0607(use_test_data)
+        data.loadCryptocurrency(use_test_data)
         self.env = futuresGame(data)
         self.terminal = True
         self.episode_reward = 1.0 # use multiplication model in futures game
