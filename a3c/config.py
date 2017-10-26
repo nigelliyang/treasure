@@ -71,3 +71,6 @@ args.action_size = args.asset_num + 1
 args.use_checkpoint = False
 args.gauss_sigma = args.sigma * np.eye(args.action_size - 1)
 args.only_train_positive = True
+
+args.mean=0
+args.std=0

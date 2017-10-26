@@ -4,6 +4,7 @@ import csv
 import coinmarketcap_usd_history
 import os
 from functools import reduce
+from a3c.config import *
 
 
 class futuresData:
@@ -54,6 +55,11 @@ class futuresData:
             self.mInforFieldsNum = len(columnnames)
             self.mLength = 0
             self.mPoundage = 0
+            if not use_test_data:
+                pddata = pd.read_csv(data_dir)
+                args.mean = pddata.mean()
+                args.std = pddata.std()
+
             reader = csv.reader(f)
             i = 0
             for row in reader:
@@ -71,10 +77,13 @@ class futuresData:
                             if len(istring) == 0:
                                 baddata = True
                                 break
-                            idata[j][k] = float(istring)
+                            try:
+                                idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
+                            except Exception as e:
+                                pass
                         if baddata == True:
                             break
-                        iprice[j] = idata[j][0]
+                        iprice[j] = float(row[dateidx + 1])
                     if baddata == True:
                         i += 1
                         continue
