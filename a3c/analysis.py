@@ -8,7 +8,6 @@ from matplotlib import animation
 # The animation of policies for a certain periond
 ANIMATION_PERIOD = 30
 
-
 data_dir = "./determinate_log"
 
 file_name = 'latest_test.npy'
@@ -18,9 +17,9 @@ file_path = os.path.join(data_dir, file_name)
 data = np.load(file_path)
 
 shape = data.shape
-period_num = shape[0]-1
+period_num = shape[0] - 1
 step_num = shape[1]
-asset_num = shape[2]-2
+asset_num = shape[2] - 2
 
 period_reward = []
 for period in data:
@@ -47,7 +46,8 @@ ax2.set_ylabel('leverage')
 
 # subplot2
 ax3 = fig1.add_subplot(2, 1, 2)
-best_index = np.argmax(period_reward)
+# best_index = np.argmax(period_reward)
+best_index = len(period_reward) - 1
 benchmark_reward = []
 best_reward = []
 reward = 1
@@ -108,6 +108,8 @@ def animate(i):
         line_list[line_num].set_data(x_steps[0:data_len], data[ANIMATION_PERIOD, 0:data_len, line_num])
     return line_list
 
-animation0 = animation.FuncAnimation(fig3, animate, init_func=init,  frames=step_num, interval=1)
+
+ANIMATION_PERIOD = best_index
+animation0 = animation.FuncAnimation(fig3, animate, init_func=init, frames=step_num, interval=1)
 
 plt.show()
