@@ -77,10 +77,10 @@ class futuresData:
                             if len(istring) == 0:
                                 baddata = True
                                 break
-                            try:
-                                idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
-                            except Exception as e:
-                                pass
+                            # try:
+                            idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
+                            # except Exception as e:
+                            #     pass
                         if baddata == True:
                             break
                         iprice[j] = float(row[dateidx + 1])
