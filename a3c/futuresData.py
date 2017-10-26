@@ -54,7 +54,7 @@ class futuresData:
             self.mFuturesNum = len(Cryptosymbols)
             self.mInforFieldsNum = len(columnnames)
             self.mLength = 0
-            self.mPoundage = 0
+            self.mPoundage = 0.0025
             if not use_test_data:
                 pddata = pd.read_csv(data_dir)
                 args.mean = pddata.mean()
@@ -77,10 +77,11 @@ class futuresData:
                             if len(istring) == 0:
                                 baddata = True
                                 break
-                            try:
-                                idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
-                            except Exception as e:
-                                pass
+                            # try:
+                            idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
+                            # idata[j][k] = float(istring)
+                            # except Exception as e:
+                            #     pass
                         if baddata == True:
                             break
                         iprice[j] = float(row[dateidx + 1])
@@ -105,7 +106,7 @@ class futuresData:
             self.mFuturesNum = 6
             self.mInforFieldsNum = 10
             self.mLength = 0
-            self.mPoundage = 0
+            self.mPoundage = 0.0025
             reader = csv.reader(f)
             i = 0
             for row in reader:
