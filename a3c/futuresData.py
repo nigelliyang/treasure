@@ -22,7 +22,8 @@ class futuresData:
         start_date = '2016-01-01'
         mid_date = '2017-05-01'
         end_date = '2017-10-31'
-        columnnames = ['Close', 'Averageclose', 'Volume']
+        # columnnames = ['Close', 'Averageclose', 'Volume']
+        columnnames = ['Close', 'priceratio', 'volumeratio']
         rollingwindows = 5
 
         if use_test_data:
@@ -35,7 +36,8 @@ class futuresData:
         if not os.path.exists('./data/Cryptocurrency.csv'):
             for sym in Cryptosymbols:
                 dftemp = coinmarketcap_usd_history.main([sym, start_date, end_date, '--dataframe'])
-                dftemp['Averageclose'] = pd.rolling_mean(dftemp['Close'], window=rollingwindows)
+                dftemp['priceratio'] = dftemp['Close'] / pd.rolling_mean(dftemp['Close'], window=rollingwindows) - 1
+                dftemp['volumeratio'] = dftemp['Volume'] / pd.rolling_mean(dftemp['Volume'], window=rollingwindows) - 1
                 dftemp.set_index('Date', inplace=True)
                 dftemp = dftemp[columnnames]
                 if len(dfcrypto) == 0:
@@ -52,7 +54,7 @@ class futuresData:
         with open(data_dir, encoding='utf8') as f:
             print('[A3C_data]Loading data from data/Cryptocurrency.csv ...')
             self.mFuturesNum = len(Cryptosymbols)
-            self.mInforFieldsNum = len(columnnames)
+            self.mInforFieldsNum = len(columnnames)-1
             self.mLength = 0
             self.mPoundage = 0.0025
             if not use_test_data:
@@ -73,13 +75,13 @@ class futuresData:
                     for j in range(0, self.mFuturesNum):
                         dateidx = j * (self.mInforFieldsNum)
                         for k in range(0, self.mInforFieldsNum):
-                            istring = row[dateidx + k + 1]
+                            istring = row[dateidx + k + 2]
                             if len(istring) == 0:
                                 baddata = True
                                 break
                             # try:
-                            idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
-                            # idata[j][k] = float(istring)
+                            # idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
+                            idata[j][k] = float(istring)
                             # except Exception as e:
                             #     pass
                         if baddata == True:
