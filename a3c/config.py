@@ -11,14 +11,14 @@ parser.add_argument('--game', type=str, default='CartPole-v0',
 
 # input parameters
 parser.add_argument('--asset_num', type=int, default=2)
-parser.add_argument('--info_num', type=int, default=2)
-parser.add_argument('--input_size', type=int, default=4,
+parser.add_argument('--info_num', type=int, default=3)
+parser.add_argument('--input_size', type=int, default=6,
                     help='input size = asset num * info num')
 
 # model parameters
 parser.add_argument('--share_variable', type=bool, default=True,
                     help='wether use the independent lstm')
-parser.add_argument('--dropout', type=bool, default=False,
+parser.add_argument('--dropout', type=bool, default=True,
                     help='use droup_out')
 parser.add_argument('--short_sight', type=bool, default=False,
                     help='lookfoward only a few steps')
@@ -44,7 +44,7 @@ parser.add_argument('--risk_beta', type=float, default=0.1,
 # train parameters
 parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
-parser.add_argument('--max_time_step', type=int, default=4 * 10 ** 5)
+parser.add_argument('--max_time_step', type=int, default=10 * 10 ** 5)
 parser.add_argument('--learning_rate', type=float, default=0.0005)
 parser.add_argument('--thread_num', type=int, default=4)
 parser.add_argument('--sigma', type=float, default=1.0,
