@@ -5,6 +5,9 @@ import coinmarketcap_usd_history
 import os
 from functools import reduce
 from a3c.config import *
+import datetime as dt
+
+from WindPy import *
 
 
 class futuresData:
@@ -16,6 +19,42 @@ class futuresData:
         self.mData = []
         self.mDate = []
         self.mPrice = []
+
+    def loadFuturesData(self, use_test_data):
+        w.start()
+
+        start_date = '2013-01-01'
+        mid_date = '2017-01-01'
+        end_date = (pd.datetime.now() + dt.timedelta(-1)).strftime("%Y-%m-%d")
+        wset_data = w.wset("sectorconstituent", "date=" + end_date + ";sectorid=1000015510000000")
+        wset_df = pd.DataFrame(data=np.mat(wset_data.Data).T, columns=wset_data.Fields)
+
+        # wset_df.set_index("date",inplace=True)
+        wsd_df = pd.DataFrame(columns=['WINDCODE', 'SEC_NAME', 'PCT_CHG1', 'PCT_CHG2'])
+        for sec in wset_df["wind_code"]:
+            if sec.find('RS') != -1 or sec.find('B') != -1 or sec.find('WH') != -1 or sec.find('WR') != -1 or sec.find(
+                    'BB') != -1 or sec.find('FB') != -1 or sec.find('FU') != -1 or sec.find('JR') != -1 or sec.find(
+                'LR') != -1 or sec.find('PM') != -1 or sec.find('SF') != -1 or sec.find('RI') != -1:
+                continue
+            print (sec)
+
+
+
+            wsd_data = w.wsd(sec, "close,volume", start_date, end_date)
+            wsdtemp_df = pd.DataFrame(data=np.mat(wsd_data.Data).T, columns=wsd_data.Fields, index=wsd_data.Times)
+            wsdtemp_df = wsdtemp_df.dropna()
+            if (np.double(wsdtemp_df['PCT_CHG']) != 0).all() and (
+                np.abs(np.double(wsdtemp_df['PCT_CHG'])) < 100).all() and len(
+                    wsdtemp_df) > 0:
+                wsd_df = wsd_df.append(pd.Series(), ignore_index=True)
+                wsd_df['WINDCODE'][-1:] = wsdtemp_df['WINDCODE'][0]
+                wsd_df['SEC_NAME'][-1:] = wsdtemp_df['SEC_NAME'][0]
+                wsd_df['PCT_CHG1'][-1:] = np.double(wsdtemp_df['PCT_CHG'][1])
+                wsd_df['PCT_CHG2'][-1:] = np.double(wsdtemp_df['PCT_CHG'][0])
+
+        wsd_dfcopy = wsd_df.copy()
+        wsd_df.set_index('SEC_NAME', inplace=True)
+
 
     def loadCryptocurrency(self, use_test_data):
         Cryptosymbols = ['Bitcoin', 'Ethereum']
@@ -242,7 +281,8 @@ class Futures_cn(object):
 
 if __name__ == '__main__':
     c = futuresData()
-    c.loadCryptocurrency(True)
+    c.loadFuturesData(False)
+    # c.loadCryptocurrency(True)
 
     # c = Futures_cn()
     # c.load_tranform(path_list)
