@@ -62,7 +62,7 @@ class futuresData:
         inputdata.set_index(inputdata.columns[0], inplace=True)
         inputdata.index = pd.to_datetime(inputdata.index)
 
-        print('[A3C_data]Loading data from data/FuturesData.csv ...')
+        print('[A3C_data]Loading data from data/IndexData.csv ...')
         self.mFuturesNum = len(windcode)
         self.mInforFieldsNum = 4
         args.asset_num = self.mFuturesNum
