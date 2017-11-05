@@ -44,7 +44,7 @@ class futuresData:
                 # subsec = rm.group(1) + rm.group(3) + rm.group(4)
                 wsdtemp_df['inputClose'] = wsdtemp_df['CLOSE']
                 wsdtemp_df['Averageclose'] = wsdtemp_df['CLOSE'].rolling(window=rollingwindows).mean()
-                wsdtemp_df['Averagevolume'] = wsdtemp_df['VOLUME'].rolling(window=rollingwindows).mean()
+                # wsdtemp_df['Averagevolume'] = wsdtemp_df['VOLUME'].rolling(window=rollingwindows).mean()
                 wsdtemp_df.index = pd.to_datetime(wsdtemp_df.index)
                 if len(inputdata) == 0:
                     inputdata = wsdtemp_df
@@ -64,7 +64,7 @@ class futuresData:
 
         print('[A3C_data]Loading data from data/IndexData.csv ...')
         self.mFuturesNum = len(windcode)
-        self.mInforFieldsNum = 4
+        self.mInforFieldsNum = 3
         args.asset_num = self.mFuturesNum
         args.info_num = self.mInforFieldsNum
         args.input_size = args.asset_num * args.info_num
