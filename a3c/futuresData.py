@@ -6,6 +6,7 @@ import os
 from functools import reduce
 from a3c.config import *
 import datetime as dt
+import re
 
 from WindPy import *
 
@@ -21,40 +22,104 @@ class futuresData:
         self.mPrice = []
 
     def loadFuturesData(self, use_test_data):
-        w.start()
+        if use_test_data:
+            data_dir = './data/FuturesData_test.csv'
+        else:
+            data_dir = './data/FuturesData_train.csv'
 
-        start_date = '2013-01-01'
-        mid_date = '2017-01-01'
-        end_date = (pd.datetime.now() + dt.timedelta(-1)).strftime("%Y-%m-%d")
-        wset_data = w.wset("sectorconstituent", "date=" + end_date + ";sectorid=1000015510000000")
-        wset_df = pd.DataFrame(data=np.mat(wset_data.Data).T, columns=wset_data.Fields)
+        if not os.path.exists('./data/FuturesData.csv'):
+            w.start()
 
-        # wset_df.set_index("date",inplace=True)
-        wsd_df = pd.DataFrame(columns=['WINDCODE', 'SEC_NAME', 'PCT_CHG1', 'PCT_CHG2'])
-        for sec in wset_df["wind_code"]:
-            if sec.find('RS') != -1 or sec.find('B') != -1 or sec.find('WH') != -1 or sec.find('WR') != -1 or sec.find(
-                    'BB') != -1 or sec.find('FB') != -1 or sec.find('FU') != -1 or sec.find('JR') != -1 or sec.find(
-                'LR') != -1 or sec.find('PM') != -1 or sec.find('SF') != -1 or sec.find('RI') != -1:
-                continue
-            print (sec)
+            start_date = '2013-01-01'
+            mid_date = '2017-01-01'
+            end_date = (pd.datetime.now() + dt.timedelta(-1)).strftime("%Y-%m-%d")
+            wset_data = w.wset("sectorconstituent", "date=" + end_date + ";sectorid=1000015510000000")
+            wset_df = pd.DataFrame(data=np.mat(wset_data.Data).T, columns=wset_data.Fields)
 
+            inputdata = []
+            # wset_df.set_index("date",inplace=True)
+            wsd_df = pd.DataFrame(columns=['WINDCODE', 'SEC_NAME', 'PCT_CHG1', 'PCT_CHG2'])
 
+            for sec in wset_df["wind_code"]:
+                if sec.find('RS') != -1 or sec.find('B') != -1 or sec.find('WH') != -1 or sec.find(
+                        'WR') != -1 or sec.find(
+                        'BB') != -1 or sec.find('FB') != -1 or sec.find('FU') != -1 or sec.find('JR') != -1 or sec.find(
+                    'LR') != -1 or sec.find('PM') != -1 or sec.find('SF') != -1 or sec.find('RI') != -1:
+                    continue
+                print(sec)
 
-            wsd_data = w.wsd(sec, "close,volume", start_date, end_date)
-            wsdtemp_df = pd.DataFrame(data=np.mat(wsd_data.Data).T, columns=wsd_data.Fields, index=wsd_data.Times)
-            wsdtemp_df = wsdtemp_df.dropna()
-            if (np.double(wsdtemp_df['PCT_CHG']) != 0).all() and (
-                np.abs(np.double(wsdtemp_df['PCT_CHG'])) < 100).all() and len(
-                    wsdtemp_df) > 0:
-                wsd_df = wsd_df.append(pd.Series(), ignore_index=True)
-                wsd_df['WINDCODE'][-1:] = wsdtemp_df['WINDCODE'][0]
-                wsd_df['SEC_NAME'][-1:] = wsdtemp_df['SEC_NAME'][0]
-                wsd_df['PCT_CHG1'][-1:] = np.double(wsdtemp_df['PCT_CHG'][1])
-                wsd_df['PCT_CHG2'][-1:] = np.double(wsdtemp_df['PCT_CHG'][0])
+                wsd_data = w.wsd(sec, "close,volume", start_date, end_date)
+                wsdtemp_df = pd.DataFrame(data=np.mat(wsd_data.Data).T, columns=wsd_data.Fields, index=wsd_data.Times)
+                # wsdtemp_df = wsdtemp_df.dropna()
+                rm = re.match(r"([a-zA-Z]+)([0-9]+)(.)([a-zA-Z]+$)", sec)
+                subsec = rm.group(1) + rm.group(3) + rm.group(4)
+                wsdtemp_df['Averageclose'] = wsdtemp_df['CLOSE'].rolling(window=5).mean()
+                wsdtemp_df['Averagevolume'] = wsdtemp_df['VOLUME'].rolling(window=5).mean()
+                wsdtemp_df.index = pd.to_datetime(wsdtemp_df.index)
+                wsdtemp_df.index[0]
+                if len(inputdata) == 0:
+                    inputdata = wsdtemp_df
+                else:
+                    inputdata = pd.merge(inputdata, wsdtemp_df, left_index=True, right_index=True, sort=True)
 
-        wsd_dfcopy = wsd_df.copy()
-        wsd_df.set_index('SEC_NAME', inplace=True)
+            inputdata.to_csv('./data/FuturesData.csv')
 
+            dftemp_train = inputdata.loc[inputdata.index <= pd.to_datetime(mid_date)]
+            dftemp_train.to_csv('./data/FuturesData_train.csv')
+            dftemp_test = inputdata.loc[inputdata.index > pd.to_datetime(mid_date)]
+            dftemp_test.to_csv('./data/FuturesData_test.csv')
+
+        inputdata = pd.read_csv(data_dir)
+
+        with open(data_dir, encoding='utf8') as f:
+            print('[A3C_data]Loading data from data/FuturesData.csv ...')
+            self.mFuturesNum = len(Cryptosymbols)
+            self.mInforFieldsNum = len(columnnames)
+            args.asset_num = self.mFuturesNum
+            args.info_num = self.mInforFieldsNum
+            args.input_size = args.asset_num * args.info_num
+            self.mLength = 0
+            self.mPoundage = 0.0025
+            if not use_test_data:
+                pddata = pd.read_csv(data_dir)
+                args.mean = pddata.mean()
+                args.std = pddata.std()
+
+            reader = csv.reader(f)
+            i = 0
+            for row in reader:
+                if i <= rollingwindows:
+                    i += 1
+                    continue
+                else:
+                    baddata = False
+                    idata = np.zeros([self.mFuturesNum, self.mInforFieldsNum])
+                    iprice = np.zeros(self.mFuturesNum)
+                    for j in range(0, self.mFuturesNum):
+                        dateidx = j * (self.mInforFieldsNum)
+                        for k in range(0, self.mInforFieldsNum):
+                            istring = row[dateidx + k + 1]
+                            if len(istring) == 0:
+                                baddata = True
+                                break
+                            # try:
+                            idata[j][k] = (float(istring) - args.mean[dateidx + k]) / args.std[dateidx + k]
+                            # idata[j][k] = float(istring)
+                            # except Exception as e:
+                            #     pass
+                        if baddata == True:
+                            break
+                        iprice[j] = float(row[dateidx + 1])
+                    if baddata == True:
+                        i += 1
+                        continue
+                    self.mData.append(idata.reshape(self.mFuturesNum * self.mInforFieldsNum))
+                    self.mDate.append(row[0])
+                    self.mPrice.append(iprice)
+                    i += 1
+                    self.mLength += 1
+
+        print('[A3C_data]Successfully loaded ' + str(self.mLength) + ' data')
 
     def loadCryptocurrency(self, use_test_data):
         Cryptosymbols = ['Bitcoin', 'Ethereum']
