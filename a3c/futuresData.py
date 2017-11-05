@@ -21,6 +21,94 @@ class futuresData:
         self.mDate = []
         self.mPrice = []
 
+    def loadIndexData(self, use_test_data):
+        if use_test_data:
+            data_dir = './data/IndexData_test.csv'
+        else:
+            data_dir = './data/IndexData_train.csv'
+        windcode = ["H11001.CSI", "000300.SH", "000905.SH", "000906.SH", "000016.SH", "399006.SZ",
+                    "NH0300.NHF", "NH0400.NHF", "NH0500.NHF", "NH0600.NHF", "NH0008.NHF"]
+        start_date = '2013-01-01'
+        mid_date = '2017-01-01'
+        end_date = (pd.datetime.now() + dt.timedelta(-1)).strftime("%Y-%m-%d")
+        inputdata = []
+        rollingwindows = 5
+
+        if not os.path.exists('./data/IndexData.csv'):
+            w.start()
+            for code in windcode:
+                wsd_data = w.wsd(code, "close,volume", start_date, end_date)
+                wsdtemp_df = pd.DataFrame(data=np.mat(wsd_data.Data).T, columns=wsd_data.Fields, index=wsd_data.Times)
+                # wsdtemp_df = wsdtemp_df.dropna()
+                # rm = re.match(r"([a-zA-Z]+)([0-9]+)(.)([a-zA-Z]+$)", sec)
+                # subsec = rm.group(1) + rm.group(3) + rm.group(4)
+                wsdtemp_df['inputClose'] = wsdtemp_df['CLOSE']
+                wsdtemp_df['Averageclose'] = wsdtemp_df['CLOSE'].rolling(window=rollingwindows).mean()
+                wsdtemp_df['Averagevolume'] = wsdtemp_df['VOLUME'].rolling(window=rollingwindows).mean()
+                wsdtemp_df.index = pd.to_datetime(wsdtemp_df.index)
+                if len(inputdata) == 0:
+                    inputdata = wsdtemp_df
+                else:
+                    inputdata = pd.merge(inputdata, wsdtemp_df, left_index=True, right_index=True, sort=True)
+
+            inputdata.to_csv('./data/IndexData.csv')
+
+            dftemp_train = inputdata.loc[inputdata.index <= pd.to_datetime(mid_date)]
+            dftemp_train.to_csv('./data/IndexData_train.csv')
+            dftemp_test = inputdata.loc[inputdata.index > pd.to_datetime(mid_date)]
+            dftemp_test.to_csv('./data/IndexData_test.csv')
+
+        inputdata = pd.read_csv(data_dir)
+        inputdata.set_index(inputdata.columns[0], inplace=True)
+        inputdata.index = pd.to_datetime(inputdata.index)
+
+        print('[A3C_data]Loading data from data/FuturesData.csv ...')
+        self.mFuturesNum = len(windcode)
+        self.mInforFieldsNum = 4
+        args.asset_num = self.mFuturesNum
+        args.info_num = self.mInforFieldsNum
+        args.input_size = args.asset_num * args.info_num
+        self.mLength = 0
+        self.mPoundage = 0.001
+        if not use_test_data:
+            args.mean = inputdata.mean()
+            args.std = inputdata.std()
+
+        i = 0
+        for index in inputdata.index:
+            if i <= rollingwindows:
+                i += 1
+                continue
+            else:
+                baddata = False
+                idata = np.zeros([self.mFuturesNum, self.mInforFieldsNum])
+                iprice = np.zeros(self.mFuturesNum)
+                for j in range(0, self.mFuturesNum):
+                    dateidx = j * (self.mInforFieldsNum + 1)
+                    for k in range(0, self.mInforFieldsNum):
+                        istring = inputdata.loc[index][dateidx + k + 1]
+                        # if len(istring) == 0:
+                        #     baddata = True
+                        #     break
+                        # try:
+                        idata[j][k] = (float(istring) - args.mean[dateidx + k + 1]) / args.std[dateidx + k + 1]
+                        # idata[j][k] = float(istring)
+                        # except Exception as e:
+                        #     pass
+                    if baddata == True:
+                        break
+                    iprice[j] = float(inputdata.loc[index][dateidx])
+                if baddata == True:
+                    i += 1
+                    continue
+                self.mData.append(idata.reshape(self.mFuturesNum * self.mInforFieldsNum))
+                self.mDate.append(index.strftime("%Y-%m-%d"))
+                self.mPrice.append(iprice)
+                i += 1
+                self.mLength += 1
+
+        print('[A3C_data]Successfully loaded ' + str(self.mLength) + ' data')
+
     def loadFuturesData(self, use_test_data):
         if use_test_data:
             data_dir = './data/FuturesData_test.csv'
@@ -43,7 +131,7 @@ class futuresData:
             for sec in wset_df["wind_code"]:
                 if sec.find('RS') != -1 or sec.find('B') != -1 or sec.find('WH') != -1 or sec.find(
                         'WR') != -1 or sec.find(
-                        'BB') != -1 or sec.find('FB') != -1 or sec.find('FU') != -1 or sec.find('JR') != -1 or sec.find(
+                    'BB') != -1 or sec.find('FB') != -1 or sec.find('FU') != -1 or sec.find('JR') != -1 or sec.find(
                     'LR') != -1 or sec.find('PM') != -1 or sec.find('SF') != -1 or sec.find('RI') != -1:
                     continue
                 print(sec)
@@ -346,7 +434,7 @@ class Futures_cn(object):
 
 if __name__ == '__main__':
     c = futuresData()
-    c.loadFuturesData(False)
+    c.loadIndexData(False)
     # c.loadCryptocurrency(True)
 
     # c = Futures_cn()
