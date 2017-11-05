@@ -10,9 +10,9 @@ parser.add_argument('--game', type=str, default='CartPole-v0',
                     help='Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
 
 # input parameters
-parser.add_argument('--asset_num', type=int, default=2)
-parser.add_argument('--info_num', type=int, default=3)
-parser.add_argument('--input_size', type=int, default=6,
+parser.add_argument('--asset_num', type=int, default=11)
+parser.add_argument('--info_num', type=int, default=4)
+parser.add_argument('--input_size', type=int, default=44,
                     help='input size = asset num * info num')
 
 # model parameters
