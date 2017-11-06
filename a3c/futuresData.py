@@ -44,7 +44,8 @@ class futuresData:
                 # subsec = rm.group(1) + rm.group(3) + rm.group(4)
                 wsdtemp_df['inputClose'] = wsdtemp_df['CLOSE']
                 wsdtemp_df['Averageclose'] = wsdtemp_df['CLOSE'].rolling(window=rollingwindows).mean()
-                # wsdtemp_df['Averagevolume'] = wsdtemp_df['VOLUME'].rolling(window=rollingwindows).mean()
+                wsdtemp_df['Averagevolume'] = wsdtemp_df['VOLUME'].rolling(window=rollingwindows).mean()
+                del wsdtemp_df['VOLUME']
                 wsdtemp_df.index = pd.to_datetime(wsdtemp_df.index)
                 if len(inputdata) == 0:
                     inputdata = wsdtemp_df
