@@ -29,6 +29,7 @@ class futuresData:
 
         inputdata = pd.read_csv(data_dir)
         inputdata.dropna(axis=1, how='all', inplace=True)
+        inputdata.dropna(axis=0, how='any', inplace=True)
         inputdata['Dateindex'] = inputdata['Date']
         inputdata.set_index('Dateindex', inplace=True)
         inputdata.index = pd.to_datetime(inputdata.index)
@@ -64,8 +65,8 @@ class futuresData:
                         #     break
                         # try:
                         colname = inputdata.columns[dateidx + k + 1]
-                        # idata[j][k] = (float(istring) - args.mean[colname]) / args.std[colname]
-                        idata[j][k] = float(istring)
+                        idata[j][k] = (float(istring) - args.mean[colname]) / args.std[colname]
+                        # idata[j][k] = float(istring)
                         # except Exception as e:
                         #     pass
                     if baddata == True:
