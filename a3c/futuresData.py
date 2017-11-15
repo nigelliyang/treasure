@@ -21,6 +21,67 @@ class futuresData:
         self.mDate = []
         self.mPrice = []
 
+    def loadBarraData(self, use_test_data):
+        if use_test_data:
+            data_dir = './data/moreday0607_test.csv'
+        else:
+            data_dir = './data/moreday0607_train.csv'
+
+        inputdata = pd.read_csv(data_dir)
+        inputdata.dropna(axis=1, how='all', inplace=True)
+        inputdata['Dateindex'] = inputdata['Date']
+        inputdata.set_index('Dateindex', inplace=True)
+        inputdata.index = pd.to_datetime(inputdata.index)
+
+        print('[A3C_data]Loading data from data/moreday0607.csv ...')
+        self.mFuturesNum = 6
+        self.mInforFieldsNum = 10
+        args.asset_num = self.mFuturesNum
+        args.info_num = self.mInforFieldsNum
+        args.input_size = args.asset_num * args.info_num
+        self.mLength = 0
+        self.mPoundage = 0.0005
+        rollingwindows = 5
+        if not use_test_data:
+            args.mean = inputdata.mean()
+            args.std = inputdata.std()
+
+        i = 0
+        for index in inputdata.index:
+            if i <= rollingwindows:
+                i += 1
+                continue
+            else:
+                baddata = False
+                idata = np.zeros([self.mFuturesNum, self.mInforFieldsNum])
+                iprice = np.zeros(self.mFuturesNum)
+                for j in range(0, self.mFuturesNum):
+                    dateidx = j * (self.mInforFieldsNum + 1)
+                    for k in range(0, self.mInforFieldsNum):
+                        istring = inputdata.loc[index][dateidx + k + 1]
+                        # if len(istring) == 0:
+                        #     baddata = True
+                        #     break
+                        # try:
+                        colname = inputdata.columns[dateidx + k + 1]
+                        # idata[j][k] = (float(istring) - args.mean[colname]) / args.std[colname]
+                        idata[j][k] = float(istring)
+                        # except Exception as e:
+                        #     pass
+                    if baddata == True:
+                        break
+                    iprice[j] = float(inputdata.loc[index][dateidx + 1])
+                if baddata == True:
+                    i += 1
+                    continue
+                self.mData.append(idata.reshape(self.mFuturesNum * self.mInforFieldsNum))
+                self.mDate.append(index.strftime("%Y-%m-%d"))
+                self.mPrice.append(iprice)
+                i += 1
+                self.mLength += 1
+
+        print('[A3C_data]Successfully loaded ' + str(self.mLength) + ' data')
+
     def loadIndexData(self, use_test_data):
         if use_test_data:
             data_dir = './data/IndexData_test.csv'
@@ -435,7 +496,7 @@ class Futures_cn(object):
 
 if __name__ == '__main__':
     c = futuresData()
-    c.loadIndexData(False)
+    c.loadBarraData(False)
     # c.loadCryptocurrency(True)
 
     # c = Futures_cn()
