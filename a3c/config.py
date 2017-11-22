@@ -44,7 +44,7 @@ parser.add_argument('--risk_beta', type=float, default=0.1,
 # train parameters
 parser.add_argument('--local_t_max', type=int, default=32,
                     help='async interval of a single thread. In fact it is the same as batch size')
-parser.add_argument('--max_time_step', type=int, default=10 * 10 ** 5)
+parser.add_argument('--max_time_step', type=int, default=30 * 10 ** 5)
 parser.add_argument('--learning_rate', type=float, default=0.0005)
 parser.add_argument('--thread_num', type=int, default=4)
 parser.add_argument('--sigma', type=float, default=1.0,

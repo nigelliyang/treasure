@@ -37,7 +37,8 @@ class TrainingThread(object):
         self.sync = self.local_network.sync_from(global_network)
 
         data = futuresData()
-        # data.loadCryptocurrency(use_test_data)
+        # # data.loadCryptocurrency(use_test_data)
+        # data.loadIndexData(use_test_data)
         data.loadBarraData(use_test_data)
         # data.loadIndexData(use_test_data)
         self.env = futuresGame(data)
@@ -76,7 +77,7 @@ class TrainingThread(object):
             if check(values):
                 return values
         print('thread %d bad luck for choosing %d times not find a good assignment, so return the guass_mean' % (
-        self.thread_index, max_times))
+            self.thread_index, max_times))
         print('gaussian mean', gauss_mean)
         return np.append(gauss_mean, 1 - np.sum(gauss_mean))
 
