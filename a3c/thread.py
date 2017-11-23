@@ -38,8 +38,8 @@ class TrainingThread(object):
 
         data = futuresData()
         # # data.loadCryptocurrency(use_test_data)
-        # data.loadIndexData(use_test_data)
-        data.loadBarraData(use_test_data)
+        data.loadIndexData(use_test_data)
+        # data.loadBarraData(use_test_data)
         # data.loadIndexData(use_test_data)
         self.env = futuresGame(data)
         self.terminal = True

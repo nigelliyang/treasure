@@ -10,9 +10,9 @@ parser.add_argument('--game', type=str, default='CartPole-v0',
                     help='Name of the atari game to play. Full list here: https://gym.openai.com/envs#atari')
 
 # input parameters
-parser.add_argument('--asset_num', type=int, default=6)
-parser.add_argument('--info_num', type=int, default=10)
-parser.add_argument('--input_size', type=int, default=60,
+parser.add_argument('--asset_num', type=int, default=11)
+parser.add_argument('--info_num', type=int, default=3)
+parser.add_argument('--input_size', type=int, default=33,
                     help='input size = asset num * info num')
 
 # model parameters
@@ -22,11 +22,11 @@ parser.add_argument('--dropout', type=bool, default=True,
                     help='use droup_out')
 parser.add_argument('--short_sight', type=bool, default=False,
                     help='lookfoward only a few steps')
-parser.add_argument('--lstm1_unit', type=int, default=128,
+parser.add_argument('--lstm1_unit', type=int, default=64,
                     help='the output size of indepent_lstm1')
 parser.add_argument('--lstm_unit', type=int, default=128,
                     help='the output size of lstm')
-parser.add_argument('--state_feature_num', type=int, default=12,
+parser.add_argument('--state_feature_num', type=int, default=4,
                     help='the num of feature extracted from both state and allocation')
 parser.add_argument('--alloRNN_fc0_output_dim', type=int, default=128,
                     help='the dimention of fc0 of the direct allocation RNN')
