@@ -46,8 +46,8 @@ ax2.set_ylabel('leverage')
 
 # subplot2
 ax3 = fig1.add_subplot(2, 1, 2)
-best_index = np.argmax(period_reward)
-# best_index = len(period_reward) - 1
+# best_index = np.argmax(period_reward)
+best_index = len(period_reward) - 1
 # best_index = 130
 
 benchmark_reward = []
