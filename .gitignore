@@ -6,11 +6,5 @@ a3c/__pycache__/
 a3c/checkpoints/latest_test/latest_test-0.data-00000-of-00001
 a3c/checkpoints/latest_test/latest_test-0.index
 a3c/checkpoints/latest_test/latest_test-0.meta
-a3c/data/Cryptocurrency.csv
-a3c/data/Cryptocurrency_test.csv
-a3c/data/Cryptocurrency_train.csv
-a3c/data/IndexData.csv
-a3c/data/IndexData_test.csv
-a3c/data/IndexData_train.csv
 a3c/determinate_log/
 a3c/tb_logs/
