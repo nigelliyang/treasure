@@ -22,11 +22,11 @@ parser.add_argument('--dropout', type=bool, default=True,
                     help='use droup_out')
 parser.add_argument('--short_sight', type=bool, default=False,
                     help='lookfoward only a few steps')
-parser.add_argument('--lstm1_unit', type=int, default=64,
+parser.add_argument('--lstm1_unit', type=int, default=256,
                     help='the output size of indepent_lstm1')
 parser.add_argument('--lstm_unit', type=int, default=128,
                     help='the output size of lstm')
-parser.add_argument('--state_feature_num', type=int, default=4,
+parser.add_argument('--state_feature_num', type=int, default=128,
                     help='the num of feature extracted from both state and allocation')
 parser.add_argument('--alloRNN_fc0_output_dim', type=int, default=128,
                     help='the dimention of fc0 of the direct allocation RNN')
